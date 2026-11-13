@@ -10,7 +10,7 @@ upstream ones, with their licenses beside them. Most come from Meshview's own
 vendor directory, at the same versions, so both sites look and behave alike.
 
 - Leaflet 1.9.4 and Leaflet.markercluster 1.5.3 for the map.
-- ECharts 5.5.0 for the history chart.
+- Chart.js 4.6.1 (MIT) for the history chart.
 - Bootstrap 5.3.3, its CSS only.
 - Inter 5.3.0 (`@fontsource-variable/inter`, SIL Open Font License 1.1), the
   variable weight axis, normal and italic.

@@ -3,12 +3,25 @@
 {% block title %}{{ "Instances" | tr }} · Meshview Planet{% endblock %}
 
 {% block head %}
-<script src="/static/vendor/echarts-5.5.0/dist/echarts.min.js"></script>
+<script src="/static/vendor/chartjs-4.6.1/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block css %}
 <style>
-#history-chart { width:100%; height:380px; }
+/* The chart of nodes per day: the names of its two axes above it, and its
+   legend below, both in HTML; the legend scrolls when the instances are many. */
+.history { padding:12px 16px 14px; }
+.history-axes { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; color:var(--mesh-muted); font-size:12px; }
+.history-axes .is-total { color:var(--mesh-text); font-weight:700; }
+.history-chart { position:relative; height:300px; }
+.history-status { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; margin:0; padding:0 16px; color:var(--mesh-muted); font-size:13px; text-align:center; }
+.history-status:empty { display:none; }
+.history-legend { display:flex; flex-wrap:wrap; gap:2px 6px; max-height:84px; margin-top:10px; overflow:auto; }
+.history-legend button { display:inline-flex; align-items:center; gap:6px; padding:3px 6px; border:0; border-radius:5px; background:none; color:var(--mesh-muted); font:inherit; font-size:12px; cursor:pointer; }
+.history-legend button:hover { background:var(--mesh-soft); }
+.history-legend button[aria-pressed="false"] { opacity:.45; text-decoration:line-through; }
+.history-legend .swatch { flex:none; width:18px; height:0; border-top:3px solid currentColor; }
+.history-legend .is-total .swatch { border-top-style:dashed; }
 .planet-table-wrap { width:100%; overflow:auto; }
 .planet-table { width:100%; min-width:860px; border-collapse:collapse; font-size:13px; margin:0; color:var(--mesh-text); }
 .planet-table th { height:40px; padding:0 14px; background:var(--mesh-brand); color:white; font-weight:600; font-size:12px; white-space:nowrap; text-align:left; }
@@ -104,7 +117,17 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
             <option value="366">{{ "Last year" | tr }}</option>
         </select>
     </div>
-    <div id="history-chart" role="img" aria-label="{{ "Nodes per day of each instance" | tr }}"></div>
+    <div class="history">
+        <div class="history-axes" aria-hidden="true">
+            <span>{{ "Per instance" | tr }}</span>
+            <span class="is-total">{{ "All instances" | tr }}</span>
+        </div>
+        <div class="history-chart">
+            <canvas id="history-chart" role="img" aria-label="{{ "Nodes per day of each instance" | tr }}"></canvas>
+            <p id="history-status" class="history-status" role="status"></p>
+        </div>
+        <div id="history-legend" class="history-legend"></div>
+    </div>
 </section>
 
 <section class="mesh-panel" aria-labelledby="list-title">

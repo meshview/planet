@@ -150,9 +150,62 @@
 
     // --- The history ---
 
-    const chartElement = document.getElementById("history-chart");
-    const chart = initMeshChart(chartElement);
-    window.addEventListener("resize", () => chart.resize());
+    // Chart.js draws it: its tooltip goes to the point nearest the pointer,
+    // which is what this chart is looked at for. The names of the axes and
+    // the legend are HTML around it.
+    const canvas = document.getElementById("history-chart");
+    const historyStatus = document.getElementById("history-status");
+    const legend = document.getElementById("history-legend");
+    const totalName = document.querySelector(".history-axes .is-total");
+    // ECharts' palette, which the chart had: the colours of the instances.
+    const PALETTE = ["#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de", "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"];
+    let chart = null;
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+
+    // The theme's colours, read when drawing, and again when it changes.
+    function themeColors() {
+        const style = getComputedStyle(document.documentElement);
+        const value = name => style.getPropertyValue(name).trim();
+        return {text: value("--mesh-text"), muted: value("--mesh-muted"), border: value("--mesh-border"), surface: value("--mesh-surface")};
+    }
+
+    function themed(colors) {
+        const ticks = {color: colors.muted, callback: value => formatNumber(value)};
+        return {
+            x: {ticks: {color: colors.muted, maxRotation: 0, autoSkipPadding: 16}, grid: {color: colors.border}, border: {color: colors.border}},
+            y: {position: "left", beginAtZero: true, ticks, grid: {color: colors.border}, border: {display: false}},
+            // Only while the sum is shown.
+            total: {display: "auto", position: "right", beginAtZero: true, ticks: {...ticks, color: colors.text}, grid: {display: false}, border: {display: false}},
+        };
+    }
+
+    function tooltip(colors) {
+        return {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+            titleColor: colors.text,
+            bodyColor: colors.text,
+            padding: 10,
+            boxPadding: 4,
+            usePointStyle: true,
+            callbacks: {
+                title: items => items.length ? formatDay(items[0].label) : "",
+                label: item => `${item.dataset.label}: ${formatNumber(item.parsed.y)}`,
+            },
+        };
+    }
+
+    document.addEventListener("meshview:themechange", () => {
+        if (!chart) return;
+        const colors = themeColors();
+        chart.options.scales = themed(colors);
+        chart.options.plugins.tooltip = tooltip(colors);
+        const total = chart.data.datasets[0];
+        total.borderColor = total.backgroundColor = colors.text;
+        legend.querySelector(".is-total .swatch")?.style.setProperty("border-top-color", colors.text);
+        chart.update("none");
+    });
 
     // Every day from the first to the last, so that a day nobody answered
     // shows as a gap rather than being skipped.
@@ -167,71 +220,99 @@
     const dayFormat = new Intl.DateTimeFormat(language, {dateStyle: "medium", timeZone: "UTC"});
     const formatDay = date => dayFormat.format(new Date(`${date}T00:00:00Z`));
 
-    // The colour of the text, which theme.js turns light at night.
-    const TOTAL_COLOR = "#243247";
+    // One button for each line, to hide it or show it again.
+    function drawLegend() {
+        legend.replaceChildren(...chart.data.datasets.map((dataset, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            if (index === 0) button.className = "is-total";
+            button.setAttribute("aria-pressed", String(chart.isDatasetVisible(index)));
+            const swatch = document.createElement("span");
+            swatch.className = "swatch";
+            swatch.style.borderTopColor = dataset.borderColor;
+            const label = document.createElement("span");
+            label.textContent = dataset.label;
+            button.append(swatch, label);
+            button.addEventListener("click", () => {
+                const visible = !chart.isDatasetVisible(index);
+                chart.setDatasetVisibility(index, visible);
+                button.setAttribute("aria-pressed", String(visible));
+                if (index === 0) totalName.hidden = !visible;
+                chart.update();
+            });
+            return button;
+        }));
+    }
 
     async function loadHistory() {
         const days = document.getElementById("history-days").value;
-        chart.showLoading({text: MeshI18n.t("Loading…"), color: "#245ea8", textColor: "#566579", maskColor: "rgba(0,0,0,0)"});
+        historyStatus.textContent = MeshI18n.t("Loading…");
         try {
             const history = await getJson(`/api/v1/histogram?days=${encodeURIComponent(days)}`);
             const dates = daysBetween(history.start_date, history.end_date);
             const totals = new Map(dates.map(date => [date, null]));
-            const series = history.instances.map(instance => {
+            // Points only while there are few days: with many, the line is
+            // enough, and the nearest one still shows when pointed at.
+            const pointRadius = dates.length <= 45 ? 2.5 : 0;
+            const datasets = history.instances.map((instance, index) => {
                 const counts = new Map(instance.points.map(point => [point.date, point.node_count]));
                 for (const [date, count] of counts) totals.set(date, (totals.get(date) || 0) + count);
+                const color = PALETTE[index % PALETTE.length];
                 return {
-                    name: areaOf(instance) + " · " + hostOf(instance.url),
-                    type: "line",
-                    // Every day a point, to be pointed at: small when there are
-                    // many, and solid, as hollow ones are white at night.
-                    symbol: "circle",
-                    symbolSize: dates.length <= 45 ? 5 : 3,
-                    connectNulls: false,
-                    emphasis: {focus: "series"},
+                    label: areaOf(instance) + " · " + hostOf(instance.url),
                     data: dates.map(date => counts.has(date) ? counts.get(date) : null),
+                    yAxisID: "y",
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 1.5,
+                    pointRadius,
+                    pointHoverRadius: 5,
+                    tension: 0.25,
                 };
             });
-            // The sum, on a scale of its own: dashed, in the colour of the
-            // axis on the right that measures it.
-            const total = MeshI18n.t("All instances");
-            series.unshift({
-                name: total, type: "line", yAxisIndex: 1, z: 1,
-                symbol: "circle", symbolSize: dates.length <= 45 ? 6 : 4,
-                lineStyle: {width: 3, type: "dashed", color: TOTAL_COLOR}, itemStyle: {color: TOTAL_COLOR},
-                emphasis: {focus: "series"},
+            // The sum, on a scale of its own, on the right: dashed, in the
+            // colour of the text, as that axis is.
+            const colors = themeColors();
+            datasets.unshift({
+                label: MeshI18n.t("All instances"),
                 data: dates.map(date => totals.get(date)),
+                yAxisID: "total",
+                borderColor: colors.text,
+                backgroundColor: colors.text,
+                borderWidth: 2.5,
+                borderDash: [7, 5],
+                pointRadius,
+                pointHoverRadius: 5,
+                tension: 0.25,
+                order: -1,
             });
-            chart.hideLoading();
-            chart.setOption({
-                animation: false,
-                // Room above for the names of the axes, each written outwards from its
-                // axis so that neither runs off the side.
-                grid: {left: 56, right: 64, top: 54, bottom: 94},
-                // One point at a time: with every instance in it, a day's
-                // tooltip ran far below the chart.
-                tooltip: {
-                    trigger: "item",
-                    confine: true,
-                    formatter: point => point.value == null ? "" :
-                        `${point.marker}${escapeHtml(point.seriesName)}<br>`
-                        + `${escapeHtml(formatDay(point.name))}: <b>${escapeHtml(formatNumber(point.value))}</b>`,
+
+            chart?.destroy();
+            chart = new Chart(canvas, {
+                type: "line",
+                data: {labels: dates, datasets},
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    // The tooltip of the point nearest the pointer, wherever
+                    // the pointer is over the chart.
+                    interaction: {mode: "nearest", intersect: false},
+                    // Days nobody answered are gaps, not joined across.
+                    spanGaps: false,
+                    scales: themed(colors),
+                    plugins: {legend: {display: false}, tooltip: tooltip(colors)},
                 },
-                // Room at the sides by padding: with `left` set, ECharts takes no
-                // notice of `right`, and the pager would touch the edge.
-                legend: {type: "scroll", left: 0, padding: [5, 17], bottom: 8, textStyle: {color: "#566579"}},
-                xAxis: {type: "category", data: dates, boundaryGap: false, axisLabel: {color: "#566579"}},
-                yAxis: [
-                    {type: "value", name: MeshI18n.t("Per instance"), splitLine: {lineStyle: {color: "#dce4ef"}}, axisLabel: {color: "#566579"}, nameGap: 22, nameTextStyle: {color: "#566579", align: "left", padding: [0, 0, 0, -40]}},
-                    {type: "value", name: total, splitLine: {show: false}, axisLabel: {color: TOTAL_COLOR}, nameGap: 22, nameTextStyle: {color: TOTAL_COLOR, fontWeight: "bold", align: "right", padding: [0, -48, 0, 0]}},
-                ],
-                series,
-            }, true);
+            });
+            drawLegend();
+            totalName.hidden = false;
+            historyStatus.textContent = "";
         } catch (error) {
             console.error(error);
-            chart.hideLoading();
-            chart.clear();
-            chartElement.textContent = MeshI18n.t("The history could not be loaded. Try again in a while.");
+            chart?.destroy();
+            chart = null;
+            legend.replaceChildren();
+            historyStatus.textContent = MeshI18n.t("The history could not be loaded. Try again in a while.");
         }
     }
     document.getElementById("history-days").addEventListener("change", loadHistory);
