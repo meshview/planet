@@ -17,4 +17,5 @@ pub mod meshview;
 pub mod net;
 pub mod notify;
 pub mod submit;
+pub mod term;
 pub mod web;

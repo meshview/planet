@@ -3,10 +3,10 @@
 
 //! Putting the process together.
 
-use crate::areas::{Areas, Language};
 use crate::collector::{Collector, unix_now};
 use crate::config::Config;
 use crate::notify::Notifier;
+use crate::term::Style;
 use crate::web::{self, AppState};
 use crate::{admin, db, import};
 use anyhow::{Context, Result};
@@ -84,7 +84,7 @@ fn notifier(config: &Config) -> Result<Notifier> {
     Ok(notifier)
 }
 
-/// One collection round, and exit.
+/// One collection round, and exit, saying what it did.
 pub async fn collect(config: Config) -> Result<()> {
     let pool = db::open(&config.database.path).await?;
     let notifier = notifier(&config)?;
@@ -93,7 +93,24 @@ pub async fn collect(config: Config) -> Result<()> {
     let result = collector.round(unix_now()).await;
     notifier.flush().await;
     db::close(pool).await;
-    result.map(|_| ())
+    let (report, cleanup) = result?;
+    println!(
+        "{} instances read: {} answered, {} did not; {} nodes",
+        report.succeeded + report.failed,
+        report.succeeded,
+        report.failed,
+        report.nodes
+    );
+    for url in &cleanup.offline {
+        println!("{url} is now offline");
+    }
+    for url in &cleanup.deleted {
+        println!("{url} was deleted, after being offline too long");
+    }
+    if report.failed > 0 {
+        println!("`meshview-planet instance list` tells why those that did not answer failed");
+    }
+    Ok(())
 }
 
 /// Seeds the list from another site, and exit.
@@ -110,12 +127,15 @@ pub async fn import(config: Config, source: &str) -> Result<()> {
     .await;
     db::close(pool).await;
     let imported = result?;
-    info!(
+    println!(
         "{} instances added, {} already there, {} left out",
         imported.added,
         imported.already_there,
         imported.unknown.len()
     );
+    for url in &imported.unknown {
+        println!("left out, with no area known for it: {url}");
+    }
     Ok(())
 }
 
@@ -151,7 +171,7 @@ async fn instance_action(
     let collector = || Collector::new(pool.clone(), config.collector.clone());
     let now = unix_now();
     match action {
-        InstanceAction::List => print!("{}", instance_table(pool).await?),
+        InstanceAction::List => print!("{}", instance_table(pool, config).await?),
         InstanceAction::Add {
             url,
             country,
@@ -196,60 +216,30 @@ async fn instance_action(
     Ok(())
 }
 
-/// Every instance, disabled ones too, as a table for a terminal.
-async fn instance_table(pool: &sqlx::SqlitePool) -> Result<String> {
-    let mut rows = vec![[
-        "STATE".to_string(),
-        "NODES".to_string(),
-        "VERSION".to_string(),
-        "AREA".to_string(),
-        "URL".to_string(),
-        "LAST ERROR".to_string(),
-    ]];
-    for instance in db::instances(pool).await? {
-        rows.push([
-            admin::state(&instance).to_string(),
-            db::count_nodes(pool, instance.id).await?.to_string(),
-            instance.version.clone().unwrap_or_else(|| "-".into()),
-            Areas::get().label(
-                &instance.country,
-                instance.region.as_deref(),
-                Language::English,
-            ),
-            instance.url.clone(),
-            instance.last_error.clone().unwrap_or_default(),
-        ]);
-    }
-    let mut widths = [0; 6];
-    for row in &rows {
-        for (width, cell) in widths.iter_mut().zip(row) {
-            *width = (*width).max(cell.chars().count());
-        }
-    }
-    let mut table = String::new();
-    for row in &rows {
-        let mut line = String::new();
-        for (i, (cell, width)) in row.iter().zip(widths).enumerate() {
-            if i > 0 {
-                line.push_str("  ");
-            }
-            if i == 1 {
-                line.push_str(&format!("{cell:>width$}"));
-            } else {
-                line.push_str(&format!("{cell:<width$}"));
-            }
-        }
-        table.push_str(line.trim_end());
-        table.push('\n');
-    }
-    Ok(table)
+/// Every instance, disabled ones too, grouped by state, for a terminal.
+async fn instance_table(pool: &sqlx::SqlitePool, config: &Config) -> Result<String> {
+    let counts = db::node_counts(pool).await?;
+    let instances = db::instances(pool)
+        .await?
+        .into_iter()
+        .map(|instance| {
+            let nodes = counts.get(&instance.id).copied().unwrap_or(0);
+            (instance, nodes)
+        })
+        .collect();
+    Ok(admin::instance_list(
+        instances,
+        unix_now(),
+        &config.collector,
+        Style::for_stdout(),
+    ))
 }
 
 /// Creates the database or brings its schema up to date, and exit.
 pub async fn migrate(config: Config) -> Result<()> {
     let pool = db::open(&config.database.path).await?;
     db::close(pool).await;
-    info!("{} is up to date", config.database.path.display());
+    println!("{} is up to date", config.database.path.display());
     Ok(())
 }
 

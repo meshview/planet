@@ -21,6 +21,11 @@ unless told otherwise.
 `--config <file>` (or `MESHVIEW_PLANET_CONFIG`) names the configuration; see
 [Configuration](configuration.md).
 
+`run` logs to the standard error, as a server does. The other commands say
+what they did on the standard output and log nothing, unless asked with `-v`
+(or `-vv` for more detail, as `run -v` gives too); `RUST_LOG`, if set, decides
+instead. Colour is used only on a terminal, and never with `NO_COLOR` set.
+
 ## First start
 
 ```sh
@@ -127,8 +132,7 @@ location / {
 
 Instances come from the site's form, but the admin can also handle them from
 the command line, on the same database, with the server running or not: the
-site follows by itself. What was done goes to the standard output, the log to
-the standard error.
+site follows by itself.
 
 ```sh
 meshview-planet areas                    # every country, with its code
@@ -141,8 +145,10 @@ meshview-planet instance disable https://meshview.example.org
 meshview-planet instance enable https://meshview.example.org
 ```
 
-- `list` shows every instance with its state (`online`, `failing`, `offline`
-  or `disabled`), nodes, version, area, URL and last error.
+- `list` shows every instance grouped by state, each group by nodes: `online`
+  (with when it was last read), `failing` (did not answer the latest round:
+  when it last did, when it goes offline and why), `offline` (since when, when
+  it is deleted and why) and `disabled` (since when).
 - `areas` tells what to give `add`: with no country, every one with its code
   (`ES  Spain`); with one, by code or part of its English name, its regions
   (`ES-GA  Galicia`). A name that fits several countries lists them.

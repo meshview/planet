@@ -312,6 +312,17 @@ pub async fn delete_offline(pool: &SqlitePool, before: i64) -> Result<Vec<Change
     .await?)
 }
 
+/// How many nodes each instance has stored, by its id; none for one without.
+pub async fn node_counts(pool: &SqlitePool) -> Result<std::collections::HashMap<i64, i64>> {
+    let rows = sqlx::query("SELECT instance_id, COUNT(*) FROM node GROUP BY instance_id")
+        .fetch_all(pool)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| (row.get::<i64, _>(0), row.get::<i64, _>(1)))
+        .collect())
+}
+
 /// How many nodes an instance has stored.
 pub async fn count_nodes(pool: &SqlitePool, instance: i64) -> Result<i64> {
     Ok(

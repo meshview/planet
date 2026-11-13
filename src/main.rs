@@ -2,10 +2,12 @@
 // Copyright (C) 2026 Óscar García Amor <ogarcia@connectical.com>
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use meshview_planet::admin;
 use meshview_planet::app::{self, InstanceAction};
 use meshview_planet::config::{self, Config};
+use meshview_planet::term::Style;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -19,6 +21,11 @@ struct Cli {
     /// read, the first that is there.
     #[arg(long, short, env = "MESHVIEW_PLANET_CONFIG", global = true)]
     config: Option<PathBuf>,
+
+    /// Show the log: `run` always does; the other commands only with this.
+    /// Twice for more detail. RUST_LOG, if set, decides instead.
+    #[arg(long, short, action = ArgAction::Count, global = true)]
+    verbose: u8,
 
     /// What to do: there is no default, so that a bare `meshview-planet` only
     /// shows this help rather than start a server.
@@ -84,12 +91,24 @@ enum InstanceCommand {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    // The server's log is what it is for; the other commands say what they
+    // did on the standard output, and log only when asked.
+    let serving = matches!(cli.command, Command::Run);
+    let level = match (serving, cli.verbose) {
+        (true, 0) => "info",
+        (true, _) | (false, 2..) => "debug",
+        (false, 1) => "info",
+        (false, 0) => "off",
+    };
+    let colour = std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty())
+        && std::io::stderr().is_terminal();
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| level.into()))
         .with_writer(std::io::stderr)
+        .with_ansi(colour)
         .init();
 
-    let cli = Cli::parse();
     info!(
         "{} {} — free software under the AGPL, version 3 or later",
         env!("CARGO_PKG_NAME"),
@@ -122,7 +141,7 @@ async fn main() -> Result<()> {
         Command::Import { source } => app::import(config, &source).await,
         Command::Migrate => app::migrate(config).await,
         Command::Areas { country } => {
-            print!("{}", admin::areas(country.as_deref())?);
+            print!("{}", admin::areas(country.as_deref(), Style::for_stdout())?);
             Ok(())
         }
         Command::Instance { action } => {
