@@ -179,7 +179,7 @@ fn render(config: &Config) -> anyhow::Result<Rendered> {
 
 /// The language to answer in, and whether the request chose it, which is
 /// then kept in a cookie.
-fn language(uri: &Uri, headers: &HeaderMap) -> (&'static str, bool) {
+pub fn language(uri: &Uri, headers: &HeaderMap) -> (&'static str, bool) {
     let known = |code: &str| {
         let code = code.trim().to_ascii_lowercase();
         let primary = code

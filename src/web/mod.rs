@@ -8,6 +8,7 @@ pub mod cache;
 pub mod error;
 mod legacy;
 pub mod pages;
+mod reference;
 pub mod v1;
 
 use crate::collector::{Collector, unix_now};
@@ -31,14 +32,13 @@ use tower_http::cors::{Any, CorsLayer};
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use utoipa_scalar::{Scalar, Servable};
 
 const DOCS_PATH: &str = "/api/docs";
 const OPENAPI_PATH: &str = "/api/openapi.json";
 
 /// Scalar, as Meshview serves it.
 const SCALAR_HTML: &str = r#"<!doctype html>
-<html>
+<html lang="$locale">
   <head>
     <title>Meshview Planet API</title>
     <meta charset="utf-8" />
@@ -46,7 +46,7 @@ const SCALAR_HTML: &str = r#"<!doctype html>
   </head>
   <body>
     <script id="api-reference" type="application/json"
-      data-configuration='{"operationTitleSource":"path"}'>$spec</script>
+      data-configuration='{"operationTitleSource":"path","localization":{"locale":"$locale"}}'>$spec</script>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4"></script>
   </body>
 </html>
@@ -56,9 +56,7 @@ const SCALAR_HTML: &str = r#"<!doctype html>
 #[openapi(
     info(
         title = "Meshview Planet",
-        description = "The nodes every listed Meshview instance sees, and the instances \
-            themselves.\n\nEvery `GET` can be called from any web page (CORS is open), and its \
-            answer carries an ETag that changes only when the data does.",
+        description = include_str!("../../assets/api/intro.md"),
         license(name = "AGPL-3.0-or-later", identifier = "AGPL-3.0-or-later"),
     ),
     tags(
@@ -91,13 +89,57 @@ impl AppState {
     }
 }
 
-pub fn router(state: AppState) -> Router {
-    let (api, reference) = OpenApiRouter::with_openapi(Reference::openapi())
+/// The documented routes and the reference that documents them.
+pub fn assemble() -> (Router<AppState>, utoipa::openapi::OpenApi) {
+    OpenApiRouter::with_openapi(Reference::openapi())
         .routes(routes!(livez))
         .routes(routes!(version))
         .nest("/api/v1", v1::router())
-        .split_for_parts();
-    let spec = serde_json::to_string(&reference).expect("the reference serialises");
+        .split_for_parts()
+}
+
+/// The reference in one language: the document, and the page that shows it.
+struct Documents {
+    by_language: HashMap<&'static str, (bytes::Bytes, String)>,
+}
+
+impl Documents {
+    fn new(reference: &utoipa::openapi::OpenApi) -> Self {
+        let english = serde_json::to_value(reference).expect("the reference serialises");
+        let catalogs = reference::catalogs();
+        let by_language = pages::LANGUAGES
+            .into_iter()
+            .map(|code| {
+                let document = match catalogs.get(code) {
+                    Some(catalog) => reference::translate(&english, catalog),
+                    None => english.clone(),
+                };
+                let json = document.to_string();
+                // Safe inside the page's script element.
+                let inline = json
+                    .replace('<', "\\u003c")
+                    .replace('>', "\\u003e")
+                    .replace('&', "\\u0026")
+                    .replace('\'', "\\u0027");
+                let page = SCALAR_HTML
+                    .replace("$locale", code)
+                    .replace("$spec", &inline);
+                (code, (bytes::Bytes::from(json), page))
+            })
+            .collect();
+        Self { by_language }
+    }
+
+    fn get(&self, code: &str) -> &(bytes::Bytes, String) {
+        self.by_language
+            .get(code)
+            .unwrap_or_else(|| &self.by_language["en"])
+    }
+}
+
+pub fn router(state: AppState) -> Router {
+    let (api, reference) = assemble();
+    let documents = Arc::new(Documents::new(&reference));
 
     // Any page may read; only this site's own pages may write, which they do
     // without asking.
@@ -109,19 +151,33 @@ pub fn router(state: AppState) -> Router {
         .expect("the pages are built in and render with any configuration");
     let missing = pages.clone();
 
+    // The reference, in the visitor's language as the pages are, or in the
+    // one `?lang=` asks for.
+    let docs = Arc::clone(&documents);
+    let spec = Arc::clone(&documents);
     api.merge(legacy::router())
         .merge(pages.router())
-        .merge(Scalar::with_url(DOCS_PATH, reference).custom_html(SCALAR_HTML))
+        .route(
+            DOCS_PATH,
+            get(move |request: axum::extract::Request| async move {
+                let (code, _) = pages::language(request.uri(), request.headers());
+                (
+                    [(axum::http::header::VARY, "Accept-Language, Cookie")],
+                    axum::response::Html(docs.get(code).1.clone()),
+                )
+            }),
+        )
         .route(
             OPENAPI_PATH,
-            get(move || {
-                let spec = spec.clone();
-                async move {
-                    (
-                        [(axum::http::header::CONTENT_TYPE, "application/json")],
-                        spec,
-                    )
-                }
+            get(move |request: axum::extract::Request| async move {
+                let (code, _) = pages::language(request.uri(), request.headers());
+                (
+                    [
+                        (axum::http::header::CONTENT_TYPE, "application/json"),
+                        (axum::http::header::VARY, "Accept-Language, Cookie"),
+                    ],
+                    spec.get(code).0.clone(),
+                )
             }),
         )
         .fallback(move |request: axum::extract::Request| async move {

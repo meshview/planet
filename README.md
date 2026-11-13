@@ -1,50 +1,50 @@
 # Meshview Planet
 
 A world map of the nodes every [Meshview](https://github.com/meshview/meshview)
-instance sees, and the list of those instances: a small application,
-to deploy wherever you want.
+instance sees, and the list of those instances: a small application in
+Meshview's style, to deploy wherever you want.
 
-It reads every listed instance every few hours (`/version` and its nodes API),
-keeps what each one answered in SQLite, and counts its nodes day by day. An
-instance that stops answering is marked offline after three days, which takes
-its nodes off the map, and deleted after thirty more; one that answers again
+Every few hours it asks each listed instance for its version and the nodes it
+heard, keeps what each answered in SQLite, and counts its nodes day by day. An
+instance that stops answering goes offline after three days, which takes its
+nodes off the map, and is deleted after thirty more; one that answers again
 comes back by itself.
 
-Anyone can add an instance from the web, with no moderation: it is accepted
-only if it answers as a Meshview does there and then, and its area is chosen
-from a closed list of countries and their regions (ISO 3166), so nothing typed
-by a visitor is ever shown as text.
+Anyone can add an instance from the site, with no moderation: it is accepted
+only if it answers as a Meshview there and then, and its area is chosen from a
+closed list of countries and their regions (ISO 3166), so nothing typed by a
+visitor is ever shown as text.
+
+The site is in English and Spanish, in light and dark, and its API is
+documented at `/api/docs`.
 
 ## Running it
 
+From a release's static binary, or a build:
+
 ```sh
 cargo build --release
-./target/release/meshview-planet   # serve and collect
+./target/release/meshview-planet   # serve on :8080 and collect
 ```
 
-The configuration is `config.toml` (see `sample.config.toml`), or environment
-variables as `MESHVIEW_PLANET_<SECTION>__<KEY>`. Other commands: `collect` (one
-round now), `migrate`, and `--help`.
-
-## API
-
-Documented at `/api/docs` (OpenAPI at `/api/openapi.json`), under `/api/v1`:
-nodes, instances (and adding one), their daily history, and the areas to choose
-from. The old site's addresses (`/api/nodes`, `/api/instances`,
-`/api/histogram`, `/out/node-link`) keep answering in its shapes. Reads are
-open to any web page, and carry an ETag that changes only with the data.
-
-## Development
+Or the container image:
 
 ```sh
-git config core.hooksPath .githooks   # rustfmt and clippy before each commit
-cargo test
+podman run -d -p 8080:8080 -v planet-data:/data ghcr.io/meshview/planet:latest
 ```
 
-The list of areas, `assets/areas.json`, is built from Debian's
-[iso-codes](https://salsa.debian.org/iso-codes-team/iso-codes) (LGPL-2.1 or
-later) by `scripts/update-areas.py`.
+The configuration is `config.toml` (see [sample.config.toml](sample.config.toml))
+or environment variables, `MESHVIEW_PLANET_<SECTION>__<KEY>`.
+
+## Documentation
+
+- [Configuration](docs/configuration.md)
+- [Deployment](docs/deployment.md)
+- [API](docs/api.md)
+- [Development](docs/development.md)
 
 ## License
 
-AGPL-3.0-or-later, as Meshview.
+AGPL-3.0-or-later, as Meshview. The list of areas comes from Debian's
+iso-codes (LGPL-2.1-or-later), and the bundled libraries keep their own
+licenses, beside them under `assets/static/vendor/`.

@@ -371,6 +371,61 @@ mod tests {
         assert_eq!(config.environment_variables().count(), 3);
     }
 
+    /// Every key there is, by section, from the defaults.
+    fn every_key() -> std::collections::BTreeMap<String, Vec<String>> {
+        let defaults = Table::try_from(Config::default()).unwrap();
+        defaults
+            .into_iter()
+            .map(|(section, keys)| {
+                let keys = match keys {
+                    Value::Table(keys) => keys.keys().cloned().collect(),
+                    _ => Vec::new(),
+                };
+                (section, keys)
+            })
+            .collect()
+    }
+
+    /// The documented keys, by section: the rows of each section's table in
+    /// docs/configuration.md.
+    fn documented_keys() -> std::collections::BTreeMap<String, Vec<String>> {
+        const DOCS: &str = include_str!("../docs/configuration.md");
+        let mut documented = std::collections::BTreeMap::new();
+        for part in DOCS.split("\n### `[").skip(1) {
+            let (section, body) = part.split_once("]`").unwrap();
+            let body = body.split("\n## ").next().unwrap();
+            let keys = body
+                .lines()
+                .filter_map(|line| line.strip_prefix("| `"))
+                .filter_map(|line| line.split_once("` |"))
+                .map(|(key, _)| key.to_string())
+                .collect();
+            documented.insert(section.to_string(), keys);
+        }
+        documented
+    }
+
+    #[test]
+    fn the_documentation_has_every_key_and_no_other() {
+        let every = every_key();
+        let documented = documented_keys();
+        assert_eq!(
+            every.keys().collect::<Vec<_>>(),
+            documented.keys().collect::<Vec<_>>(),
+            "docs/configuration.md and the code disagree about the sections"
+        );
+        for (section, keys) in &every {
+            let mut keys = keys.clone();
+            let mut written = documented[section].clone();
+            keys.sort();
+            written.sort();
+            assert_eq!(
+                keys, written,
+                "docs/configuration.md and the code disagree about [{section}]"
+            );
+        }
+    }
+
     #[test]
     fn a_bad_value_in_the_environment_names_the_variable() {
         let error = Config::parse_with_env("", env(&[("MESHVIEW_PLANET_SERVER__PORT", "many")]))
