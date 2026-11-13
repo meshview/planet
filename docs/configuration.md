@@ -75,7 +75,7 @@ a path. The log says which variables were used, by name, at start.
 
 | Key | Default | |
 |---|---|---|
-| `interval_minutes` | `240` | Minutes between collection rounds. A round also runs at start. |
+| `interval_minutes` | `240` | Minutes between collection rounds. They count from the last round in the database, so a restart does not bring one forward: the first round after a start runs at once only if the interval since the last one is over (or there was none). |
 | `days_active` | `14` | The nodes asked of each instance: those it heard in this many days. The map's default period is the same. |
 | `concurrency` | `8` | How many instances are read at the same time. |
 | `timeout_seconds` | `60` | Seconds each request to an instance gets, its answer included. |

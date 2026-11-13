@@ -209,3 +209,73 @@ async fn the_periods_are_the_configured_ones() {
     let (_, cleanup) = collector.round(NOW + 3 * DAY + 2).await.unwrap();
     assert_eq!(cleanup.deleted.len(), 1);
 }
+
+#[test]
+fn the_first_round_waits_for_what_is_left_of_the_interval() {
+    use meshview_planet::collector::first_wait;
+    use std::time::Duration;
+    let hour = Duration::from_secs(3600);
+    // Nothing to read, or never read: now.
+    assert_eq!(first_wait(None, NOW, hour), Duration::ZERO);
+    assert_eq!(first_wait(Some(0), NOW, hour), Duration::ZERO);
+    // Ten minutes ago: fifty more.
+    assert_eq!(
+        first_wait(Some(NOW - 600), NOW, hour),
+        Duration::from_secs(3000)
+    );
+    // Long ago: now.
+    assert_eq!(first_wait(Some(NOW - 7200), NOW, hour), Duration::ZERO);
+    // In the future (the clock went back): one interval, no more.
+    assert_eq!(first_wait(Some(NOW + 86_400), NOW, hour), hour);
+}
+
+#[tokio::test]
+async fn the_last_round_is_the_oldest_attempt() {
+    let (_dir, pool, collector) = planet(settings()).await;
+    assert_eq!(db::last_round(&pool).await.unwrap(), None);
+    let first = Instance::start(Kind::Rust, 3).await;
+    db::add_instance(&pool, &first.url, "ES", None, NOW)
+        .await
+        .unwrap();
+    // Never read: a round is due.
+    assert_eq!(db::last_round(&pool).await.unwrap(), Some(0));
+    collector.round(NOW).await.unwrap();
+    assert_eq!(db::last_round(&pool).await.unwrap(), Some(NOW));
+    // One added from the web later, and read then, does not move the round.
+    let id = db::add_instance(&pool, "https://later.example.org", "PT", None, NOW + 600)
+        .await
+        .unwrap()
+        .unwrap();
+    db::record_success(&pool, id, NOW + 600, &db::Version::default(), &[])
+        .await
+        .unwrap();
+    assert_eq!(db::last_round(&pool).await.unwrap(), Some(NOW));
+}
+
+/// Runs the collector for a moment, as if the service had just started.
+async fn start_for_a_moment(collector: meshview_planet::collector::Collector) {
+    let (stop, stopping) = tokio::sync::watch::channel(false);
+    let running = tokio::spawn(collector.run(stopping));
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    stop.send(true).unwrap();
+    running.await.unwrap();
+}
+
+#[tokio::test]
+async fn a_restart_does_not_read_every_instance_again() {
+    let (_dir, pool, collector) = planet(settings()).await;
+    let instance = Instance::start(Kind::Rust, 3).await;
+    let now = meshview_planet::collector::unix_now();
+    db::add_instance(&pool, &instance.url, "ES", None, now)
+        .await
+        .unwrap();
+    // A round ten minutes ago, of the four hours.
+    collector.round(now - 600).await.unwrap();
+    start_for_a_moment(collector.clone()).await;
+    assert_eq!(db::last_round(&pool).await.unwrap(), Some(now - 600));
+
+    // Five hours ago instead: due, so at once.
+    collector.round(now - 5 * 3600).await.unwrap();
+    start_for_a_moment(collector).await;
+    assert!(db::last_round(&pool).await.unwrap().unwrap() >= now);
+}

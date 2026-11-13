@@ -135,6 +135,18 @@ pub async fn instance_by_url(pool: &SqlitePool, url: &str) -> Result<Option<Inst
         .await?)
 }
 
+/// When the last round was, in unix seconds: the oldest of the instances'
+/// last attempts, since a round tries every instance (an interrupted round
+/// leaves some older, and one never tried counts as 0, so a round is due).
+/// `None` without instances.
+pub async fn last_round(pool: &SqlitePool) -> Result<Option<i64>> {
+    Ok(
+        sqlx::query_scalar("SELECT MIN(COALESCE(last_attempt_at, 0)) FROM instance")
+            .fetch_one(pool)
+            .await?,
+    )
+}
+
 /// Every instance, in the order they were added.
 pub async fn instances(pool: &SqlitePool) -> Result<Vec<Instance>> {
     Ok(sqlx::query_as("SELECT * FROM instance ORDER BY id")

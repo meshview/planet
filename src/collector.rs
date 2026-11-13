@@ -20,8 +20,9 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use futures_util::stream;
 use sqlx::SqlitePool;
+use std::time::Duration;
 use tokio::sync::watch;
-use tokio::time::MissedTickBehavior;
+use tokio::time::{Instant, MissedTickBehavior};
 use tracing::{info, warn};
 
 const DAY: i64 = 86_400;
@@ -185,11 +186,28 @@ impl Collector {
         Ok((report, cleanup))
     }
 
-    /// Runs a round now and then every interval, until told to stop. A round in
-    /// progress when the stop comes is abandoned: each instance's transaction
-    /// either committed or did not.
+    /// Runs a round every interval, until told to stop. The first comes when
+    /// the interval since the last one, as the database tells, is over: at
+    /// once on a new database or after a long stop, later after a restart, so
+    /// that restarts, even in a loop, do not read every instance each time. A
+    /// round in progress when the stop comes is abandoned: each instance's
+    /// transaction either committed or did not.
     pub async fn run(self, mut stopping: watch::Receiver<bool>) {
-        let mut ticks = tokio::time::interval(self.settings.interval());
+        let interval = self.settings.interval();
+        let wait = match db::last_round(&self.pool).await {
+            Ok(last) => first_wait(last, unix_now(), interval),
+            Err(e) => {
+                warn!("when was the last round: {e:#}");
+                Duration::ZERO
+            }
+        };
+        if !wait.is_zero() {
+            info!(
+                "last round was recent: next one in {} minutes",
+                wait.as_secs().div_ceil(60)
+            );
+        }
+        let mut ticks = tokio::time::interval_at(Instant::now() + wait, interval);
         ticks.set_missed_tick_behavior(MissedTickBehavior::Delay);
         loop {
             tokio::select! {
@@ -206,6 +224,18 @@ impl Collector {
             }
         }
     }
+}
+
+/// How long to wait for the first round, given when the last one was (unix
+/// seconds, `None` without instances): what is left of the interval, nothing if
+/// it is over, and never more than an interval, whatever the clock did.
+pub fn first_wait(last_round: Option<i64>, now: i64, interval: Duration) -> Duration {
+    let Some(last) = last_round else {
+        return Duration::ZERO;
+    };
+    let interval = i64::try_from(interval.as_secs()).unwrap_or(i64::MAX);
+    let left = last.saturating_add(interval).saturating_sub(now);
+    Duration::from_secs(left.clamp(0, interval).unsigned_abs())
 }
 
 /// Now, in unix seconds.
