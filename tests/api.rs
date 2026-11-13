@@ -603,3 +603,64 @@ async fn a_round_does_not_rebuild_on_every_instance_but_a_submission_shows_at_on
     let after = app.get("/api/v1/nodes").await.json();
     assert_eq!(after["total"], 3 + 8);
 }
+
+#[tokio::test]
+async fn a_disabled_instance_is_off_the_site_and_refused() {
+    let app = app().await;
+    let shown = Instance::start(Kind::Rust, 10).await;
+    let hidden = Instance::start(Kind::Python, 20).await;
+    app.add(&shown.url, "ES", Some("ES-GA")).await;
+    app.add(&hidden.url, "PT", None).await;
+    assert_eq!(
+        app.get("/api/v1/instances").await.json()["instances"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+
+    db::set_disabled(&app.pool, &hidden.url, Some(unix_now()))
+        .await
+        .unwrap();
+
+    for uri in ["/api/v1/instances", "/api/instances"] {
+        let listed = app.get(uri).await.json();
+        let instances = listed["instances"].as_array().unwrap();
+        assert_eq!(instances.len(), 1, "{uri}");
+        assert_eq!(instances[0]["url"], shown.url.as_str(), "{uri}");
+    }
+    assert_eq!(app.get("/api/v1/nodes").await.json()["total"], 8);
+    assert_eq!(app.get("/api/nodes").await.json()["total_nodes"], 8);
+    let history = app.get("/api/v1/histogram?days=7").await.json();
+    assert_eq!(history["instances"].as_array().unwrap().len(), 1);
+    let link = app
+        .get(&format!(
+            "/out/node-link?source_url={}&node_id=1",
+            hidden.url
+        ))
+        .await;
+    assert_eq!(link.status, StatusCode::NOT_FOUND);
+
+    let again = app
+        .post(
+            "/api/v1/instances",
+            json!({"url": hidden.url, "country": "PT"}),
+        )
+        .await;
+    assert_eq!(again.status, StatusCode::FORBIDDEN);
+    assert_eq!(again.json()["code"], "blocked");
+
+    // A round leaves it alone, and so does the cleanup, however long.
+    let before = db::instance_by_url(&app.pool, &hidden.url)
+        .await
+        .unwrap()
+        .unwrap();
+    app.collector.round(unix_now() + 60 * 86_400).await.unwrap();
+    let after = db::instance_by_url(&app.pool, &hidden.url)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(after.last_attempt_at, before.last_attempt_at);
+    assert_eq!(after.offline_since, None);
+    assert_eq!(db::count_nodes(&app.pool, after.id).await.unwrap(), 20);
+}

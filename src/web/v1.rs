@@ -374,7 +374,7 @@ pub struct Added {
     responses(
         (status = 201, description = "Added and published", body = Added),
         (status = 400, description = "The URL or the area is not valid (`invalid_url`, `private_address`, `area_required`, `unknown_country`, `unknown_region`, `bad_request`)", body = ErrorBody),
-        (status = 403, description = "Instances are not being accepted (`disabled`)", body = ErrorBody),
+        (status = 403, description = "Instances are not being accepted (`disabled`), or not this one, which the admin has disabled (`blocked`)", body = ErrorBody),
         (status = 409, description = "Already listed (`duplicate`)", body = ErrorBody),
         (status = 422, description = "It does not answer as a Meshview (`not_meshview`)", body = ErrorBody),
         (status = 429, description = "Too many attempts from this address (`rate_limited`)", body = ErrorBody),
@@ -462,6 +462,7 @@ pub fn rejection(rejection: Rejection) -> ApiError {
             (StatusCode::BAD_REQUEST, "unknown_region")
         }
         Rejection::Duplicate => (StatusCode::CONFLICT, "duplicate"),
+        Rejection::Blocked => (StatusCode::FORBIDDEN, "blocked"),
         Rejection::Probe(_) => (StatusCode::UNPROCESSABLE_ENTITY, "not_meshview"),
         Rejection::Internal(e) => return ApiError::internal(e),
     };

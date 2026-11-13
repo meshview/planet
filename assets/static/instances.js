@@ -247,6 +247,7 @@
             unknown_country: () => MeshI18n.t("Choose the country the instance is in."),
             unknown_region: () => MeshI18n.t("Choose a region from the list, or the whole country."),
             duplicate: () => MeshI18n.t("That instance is already on the list."),
+            blocked: () => MeshI18n.t("That instance is not accepted on this site."),
             not_meshview: () => MeshI18n.t("The instance did not answer as a Meshview does. Check the address, and that it can be reached from the Internet."),
             rate_limited: () => MeshI18n.t("Too many attempts from your address. Try again in an hour."),
             disabled: () => MeshI18n.t("New instances are not being accepted right now."),

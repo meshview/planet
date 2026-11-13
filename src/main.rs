@@ -3,7 +3,8 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use meshview_planet::app;
+use meshview_planet::admin;
+use meshview_planet::app::{self, InstanceAction};
 use meshview_planet::config::{self, Config};
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -36,12 +37,54 @@ enum Command {
     },
     /// Create the database or bring its schema up to date, and exit.
     Migrate,
+    /// List the countries to choose from or, given one (by code or name), its
+    /// regions, and exit.
+    Areas {
+        /// A country's code (ES) or part of its English name (spain).
+        country: Option<String>,
+    },
+    /// List, add, remove, disable or enable instances, and exit. It can be
+    /// done with the server running: the site follows by itself.
+    Instance {
+        #[command(subcommand)]
+        action: InstanceCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum InstanceCommand {
+    /// Every instance, disabled ones too, with its state.
+    List,
+    /// Add an instance, which has to answer as a Meshview unless forced.
+    Add {
+        /// Its address, as https://meshview.example.org.
+        url: String,
+        /// The country it is in, as an ISO 3166-1 code (ES): `areas` lists them.
+        #[arg(long)]
+        country: String,
+        /// The region, as an ISO 3166-2 code (ES-GA): `areas ES` lists them.
+        #[arg(long)]
+        region: Option<String>,
+        /// Add it even if it does not answer now. If it never does, the
+        /// cleanup takes it offline and in time deletes it, as any other.
+        #[arg(long)]
+        force: bool,
+    },
+    /// Delete an instance, with its nodes and its history. Anyone may add it
+    /// again; to keep it off, disable it.
+    Remove { url: String },
+    /// Take an instance off the site, keeping it in the database: not shown,
+    /// not read, and refused if submitted again.
+    Disable { url: String },
+    /// Put a disabled instance back on the site, and read it at once.
+    Enable { url: String },
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_writer(std::io::stderr)
         .init();
 
     let cli = Cli::parse();
@@ -76,5 +119,29 @@ async fn main() -> Result<()> {
         Command::Collect => app::collect(config).await,
         Command::Import { source } => app::import(config, &source).await,
         Command::Migrate => app::migrate(config).await,
+        Command::Areas { country } => {
+            print!("{}", admin::areas(country.as_deref())?);
+            Ok(())
+        }
+        Command::Instance { action } => {
+            let action = match action {
+                InstanceCommand::List => InstanceAction::List,
+                InstanceCommand::Add {
+                    url,
+                    country,
+                    region,
+                    force,
+                } => InstanceAction::Add {
+                    url,
+                    country,
+                    region,
+                    force,
+                },
+                InstanceCommand::Remove { url } => InstanceAction::Remove(url),
+                InstanceCommand::Disable { url } => InstanceAction::Disable(url),
+                InstanceCommand::Enable { url } => InstanceAction::Enable(url),
+            };
+            app::instance(config, action).await
+        }
     }
 }

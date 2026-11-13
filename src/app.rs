@@ -3,11 +3,12 @@
 
 //! Putting the process together.
 
+use crate::areas::{Areas, Language};
 use crate::collector::{Collector, unix_now};
 use crate::config::Config;
 use crate::notify::Notifier;
 use crate::web::{self, AppState};
-use crate::{db, import};
+use crate::{admin, db, import};
 use anyhow::{Context, Result};
 use std::time::Duration;
 use tokio::net::TcpListener;
@@ -116,6 +117,132 @@ pub async fn import(config: Config, source: &str) -> Result<()> {
         imported.unknown.len()
     );
     Ok(())
+}
+
+/// What the admin asks of the instances.
+#[derive(Debug, Clone)]
+pub enum InstanceAction {
+    List,
+    Add {
+        url: String,
+        country: String,
+        region: Option<String>,
+        force: bool,
+    },
+    Remove(String),
+    Disable(String),
+    Enable(String),
+}
+
+/// Lists, adds, removes, disables or enables instances, and exit. What it did
+/// goes to the standard output; the log, to the standard error.
+pub async fn instance(config: Config, action: InstanceAction) -> Result<()> {
+    let pool = db::open(&config.database.path).await?;
+    let result = instance_action(&pool, &config, action).await;
+    db::close(pool).await;
+    result
+}
+
+async fn instance_action(
+    pool: &sqlx::SqlitePool,
+    config: &Config,
+    action: InstanceAction,
+) -> Result<()> {
+    let collector = || Collector::new(pool.clone(), config.collector.clone());
+    let now = unix_now();
+    match action {
+        InstanceAction::List => print!("{}", instance_table(pool).await?),
+        InstanceAction::Add {
+            url,
+            country,
+            region,
+            force,
+        } => {
+            let (url, added) = admin::add(
+                pool,
+                &collector()?,
+                &url,
+                &country,
+                region.as_deref(),
+                force,
+                now,
+            )
+            .await?;
+            match added {
+                admin::Added::Answered { version, nodes } => {
+                    println!("{url} added: Meshview {version}, {nodes} nodes");
+                }
+                admin::Added::NotAnswering(error) => {
+                    println!("{url} added, not answering yet: {error}");
+                }
+            }
+        }
+        InstanceAction::Remove(url) => {
+            let url = admin::remove(pool, &url).await?;
+            println!("{url} removed, with its nodes and its history");
+        }
+        InstanceAction::Disable(url) => {
+            let url = admin::disable(pool, &url, now).await?;
+            println!("{url} disabled: off the site, and refused if submitted again");
+        }
+        InstanceAction::Enable(url) => {
+            let instance = admin::enable(pool, &collector()?, &url, now).await?;
+            match &instance.last_error {
+                None => println!("{} enabled, and it answers", instance.url),
+                Some(error) => println!("{} enabled, not answering yet: {error}", instance.url),
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Every instance, disabled ones too, as a table for a terminal.
+async fn instance_table(pool: &sqlx::SqlitePool) -> Result<String> {
+    let mut rows = vec![[
+        "STATE".to_string(),
+        "NODES".to_string(),
+        "VERSION".to_string(),
+        "AREA".to_string(),
+        "URL".to_string(),
+        "LAST ERROR".to_string(),
+    ]];
+    for instance in db::instances(pool).await? {
+        rows.push([
+            admin::state(&instance).to_string(),
+            db::count_nodes(pool, instance.id).await?.to_string(),
+            instance.version.clone().unwrap_or_else(|| "-".into()),
+            Areas::get().label(
+                &instance.country,
+                instance.region.as_deref(),
+                Language::English,
+            ),
+            instance.url.clone(),
+            instance.last_error.clone().unwrap_or_default(),
+        ]);
+    }
+    let mut widths = [0; 6];
+    for row in &rows {
+        for (width, cell) in widths.iter_mut().zip(row) {
+            *width = (*width).max(cell.chars().count());
+        }
+    }
+    let mut table = String::new();
+    for row in &rows {
+        let mut line = String::new();
+        for (i, (cell, width)) in row.iter().zip(widths).enumerate() {
+            if i > 0 {
+                line.push_str("  ");
+            }
+            if i == 1 {
+                line.push_str(&format!("{cell:>width$}"));
+            } else {
+                line.push_str(&format!("{cell:<width$}"));
+            }
+        }
+        table.push_str(line.trim_end());
+        table.push('\n');
+    }
+    Ok(table)
 }
 
 /// Creates the database or brings its schema up to date, and exit.

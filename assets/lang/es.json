@@ -83,6 +83,7 @@
   "Switch to night mode": "Cambiar al modo nocturno",
   "That address is on a private network, which this site cannot reach.": "Esa dirección está en una red privada, a la que este sitio no llega.",
   "That instance is already on the list.": "Esa instancia ya está en la lista.",
+  "That instance is not accepted on this site.": "Esa instancia no se acepta en este sitio.",
   "That is not a valid http or https address.": "Esa no es una dirección http o https válida.",
   "The Meshview instances whose nodes are on the map.": "Las instancias de Meshview cuyos nodos están en el mapa.",
   "The history could not be loaded. Try again in a while.": "No se pudo cargar el historial. Inténtalo de nuevo dentro de un rato.",

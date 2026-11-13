@@ -19,7 +19,10 @@ CREATE TABLE instance (
     -- Why the latest collection failed; null once one succeeds.
     last_error TEXT,
     -- Set when it has not answered for long enough; null while it answers.
-    offline_since INTEGER
+    offline_since INTEGER,
+    -- Set by the admin to keep it off the site: not shown, not read, not
+    -- cleaned up, and not to be submitted again. Null while enabled.
+    disabled_at INTEGER
 );
 
 CREATE TABLE node (

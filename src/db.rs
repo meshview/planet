@@ -63,7 +63,7 @@ pub async fn close(pool: SqlitePool) {
     pool.close().await;
 }
 
-/// An instance, as the collector and the cleanup see it.
+/// An instance, as the collector, the cleanup and the admin see it.
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
 pub struct Instance {
     pub id: i64,
@@ -78,6 +78,7 @@ pub struct Instance {
     pub last_success_at: Option<i64>,
     pub last_error: Option<String>,
     pub offline_since: Option<i64>,
+    pub disabled_at: Option<i64>,
 }
 
 /// What an instance's /version says.
@@ -135,23 +136,60 @@ pub async fn instance_by_url(pool: &SqlitePool, url: &str) -> Result<Option<Inst
         .await?)
 }
 
-/// When the last round was, in unix seconds: the oldest of the instances'
+/// When the last round was, in unix seconds: the oldest of the enabled instances'
 /// last attempts, since a round tries every instance (an interrupted round
 /// leaves some older, and one never tried counts as 0, so a round is due).
-/// `None` without instances.
+/// `None` without enabled instances.
 pub async fn last_round(pool: &SqlitePool) -> Result<Option<i64>> {
-    Ok(
-        sqlx::query_scalar("SELECT MIN(COALESCE(last_attempt_at, 0)) FROM instance")
-            .fetch_one(pool)
-            .await?,
+    Ok(sqlx::query_scalar(
+        "SELECT MIN(COALESCE(last_attempt_at, 0)) FROM instance WHERE disabled_at IS NULL",
     )
+    .fetch_one(pool)
+    .await?)
 }
 
-/// Every instance, in the order they were added.
+/// Every instance, disabled ones too, in the order they were added.
 pub async fn instances(pool: &SqlitePool) -> Result<Vec<Instance>> {
     Ok(sqlx::query_as("SELECT * FROM instance ORDER BY id")
         .fetch_all(pool)
         .await?)
+}
+
+/// The instances a round reads: every one not disabled, in the order they were
+/// added.
+pub async fn enabled_instances(pool: &SqlitePool) -> Result<Vec<Instance>> {
+    Ok(
+        sqlx::query_as("SELECT * FROM instance WHERE disabled_at IS NULL ORDER BY id")
+            .fetch_all(pool)
+            .await?,
+    )
+}
+
+/// Disables an instance (`Some(when)`) or enables it again (`None`). Enabling
+/// also takes it out of offline, so the cleanup counts from then and does not
+/// delete at once one that was offline when disabled. Answers whether the
+/// instance is there.
+pub async fn set_disabled(pool: &SqlitePool, url: &str, disabled_at: Option<i64>) -> Result<bool> {
+    let query = match disabled_at {
+        Some(_) => "UPDATE instance SET disabled_at = ? WHERE url = ?",
+        None => "UPDATE instance SET disabled_at = ?, offline_since = NULL WHERE url = ?",
+    };
+    let done = sqlx::query(query)
+        .bind(disabled_at)
+        .bind(url)
+        .execute(pool)
+        .await?;
+    Ok(done.rows_affected() > 0)
+}
+
+/// Deletes an instance with its nodes and its history. Answers whether it was
+/// there.
+pub async fn delete_instance(pool: &SqlitePool, url: &str) -> Result<bool> {
+    let done = sqlx::query("DELETE FROM instance WHERE url = ?")
+        .bind(url)
+        .execute(pool)
+        .await?;
+    Ok(done.rows_affected() > 0)
 }
 
 /// Records a good collection: what the instance runs, its nodes in place of
@@ -247,10 +285,12 @@ pub struct Changed {
 
 /// Marks offline the instances that have not had a good collection since
 /// `before` (counting from when they were added, for one that never had one).
+/// Disabled ones are left as they are.
 pub async fn mark_offline(pool: &SqlitePool, before: i64, now: i64) -> Result<Vec<Changed>> {
     Ok(sqlx::query_as(
         "UPDATE instance SET offline_since = ?
-         WHERE offline_since IS NULL AND COALESCE(last_success_at, added_at) < ?
+         WHERE offline_since IS NULL AND disabled_at IS NULL
+             AND COALESCE(last_success_at, added_at) < ?
          RETURNING url, country, region, last_error",
     )
     .bind(now)
@@ -260,10 +300,11 @@ pub async fn mark_offline(pool: &SqlitePool, before: i64, now: i64) -> Result<Ve
 }
 
 /// Deletes the instances offline since before `before`, with their nodes and
-/// their history.
+/// their history. Disabled ones are kept: the admin decides about those.
 pub async fn delete_offline(pool: &SqlitePool, before: i64) -> Result<Vec<Changed>> {
     Ok(sqlx::query_as(
-        "DELETE FROM instance WHERE offline_since IS NOT NULL AND offline_since < ?
+        "DELETE FROM instance
+         WHERE offline_since IS NOT NULL AND offline_since < ? AND disabled_at IS NULL
          RETURNING url, country, region, last_error",
     )
     .bind(before)
@@ -296,24 +337,26 @@ pub async fn daily_counts(pool: &SqlitePool, instance: i64) -> Result<Vec<(Strin
 }
 
 /// A fingerprint of everything the web answers from: it changes whenever an
-/// instance is added, collected (well or not), marked offline or deleted, and
+/// instance is added, collected (well or not), marked offline, disabled or
+/// enabled, or deleted, and
 /// nothing the web shows changes without one of those. One pass over a table
 /// of tens of rows, so cheap enough to ask before every cached answer, and
 /// right even when another process (an import) wrote.
 pub async fn fingerprint(pool: &SqlitePool) -> Result<String> {
     let row = sqlx::query(
         "SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(SUM(last_attempt_at), 0),
-             COALESCE(SUM(offline_since), 0)
+             COALESCE(SUM(offline_since), 0), COALESCE(SUM(disabled_at), 0)
          FROM instance",
     )
     .fetch_one(pool)
     .await?;
     Ok(format!(
-        "{}-{}-{}-{}",
+        "{}-{}-{}-{}-{}",
         row.get::<i64, _>(0),
         row.get::<i64, _>(1),
         row.get::<i64, _>(2),
-        row.get::<i64, _>(3)
+        row.get::<i64, _>(3),
+        row.get::<i64, _>(4)
     ))
 }
 
@@ -348,7 +391,8 @@ pub struct NodeRow {
     pub last_seen_us: Option<i64>,
 }
 
-/// The nodes of the instances that are online, with or without a position.
+/// The nodes of the instances that are online and enabled, with or without a
+/// position.
 /// One pass over the nodes, in the order of their key: a node seen recently
 /// enough is most of them, so walking an index on when it was seen would only
 /// add lookups.
@@ -358,7 +402,7 @@ pub async fn nodes(pool: &SqlitePool, filter: &NodeFilter) -> Result<Vec<NodeRow
              n.short_name, n.hw_model, n.firmware, n.role, n.channel, n.lat, n.lon,
              n.is_mqtt_gateway, n.first_seen_us, n.last_seen_us
          FROM node n JOIN instance i ON i.id = n.instance_id
-         WHERE i.offline_since IS NULL AND n.last_seen_us >= ",
+         WHERE i.offline_since IS NULL AND i.disabled_at IS NULL AND n.last_seen_us >= ",
     );
     query.push_bind(filter.seen_since_us);
     if let Some(country) = &filter.country {
@@ -389,8 +433,8 @@ pub struct InstanceSummary {
     pub trend_end: Option<i64>,
 }
 
-/// Every instance with its node counts and its trend since `trend_since` (a
-/// date): online first, then by nodes. The counts come from one grouped pass
+/// Every enabled instance with its node counts and its trend since
+/// `trend_since` (a date): online first, then by nodes. The counts come from one grouped pass
 /// over the nodes, and the trend from the history's key, two rows each.
 pub async fn instance_summaries(
     pool: &SqlitePool,
@@ -411,6 +455,7 @@ pub async fn instance_summaries(
              SELECT instance_id, COUNT(*) AS node_count, COUNT(lat) AS mapped_count
              FROM node GROUP BY instance_id
          ) n ON n.instance_id = i.id
+         WHERE i.disabled_at IS NULL
          ORDER BY i.offline_since IS NOT NULL, node_count DESC, i.id",
     )
     .bind(trend_since)

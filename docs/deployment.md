@@ -11,6 +11,8 @@ instances, writing one SQLite file. There is nothing else to run beside it.
 | `meshview-planet import <url>` | Add the instances another site lists at `<url>`, its `/api/instances`, and exit. |
 | `meshview-planet collect` | One collection round now, with its cleanup, and exit. |
 | `meshview-planet migrate` | Create the database or bring its schema up to date, and exit. `run` does this by itself. |
+| `meshview-planet areas [country]` | List the countries to choose from or, given one, its regions, and exit. |
+| `meshview-planet instance …` | List, add, remove, disable or enable instances, and exit; see [Managing instances](#managing-instances). |
 
 `--config <file>` (or `MESHVIEW_PLANET_CONFIG`) names the configuration; see
 [Configuration](configuration.md).
@@ -22,7 +24,7 @@ meshview-planet   # serve and collect
 ```
 
 The site starts empty, and fills as instances are added from its instances
-page.
+page, or with `meshview-planet instance add`.
 
 It can be seeded instead from a site that already lists Meshview instances, in
 Meshview World's shape, before the first start:
@@ -116,6 +118,44 @@ location / {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 ```
+
+## Managing instances
+
+Instances come from the site's form, but the admin can also handle them from
+the command line, on the same database, with the server running or not: the
+site follows by itself. What was done goes to the standard output, the log to
+the standard error.
+
+```sh
+meshview-planet areas                    # every country, with its code
+meshview-planet areas spain              # its regions: by code (ES) or English name
+meshview-planet instance list
+meshview-planet instance add https://meshview.example.org --country ES --region ES-GA
+meshview-planet instance add https://meshview.example.org --country ES --force
+meshview-planet instance remove https://meshview.example.org
+meshview-planet instance disable https://meshview.example.org
+meshview-planet instance enable https://meshview.example.org
+```
+
+- `list` shows every instance with its state (`online`, `failing`, `offline`
+  or `disabled`), nodes, version, area, URL and last error.
+- `areas` tells what to give `add`: with no country, every one with its code
+  (`ES  Spain`); with one, by code or part of its English name, its regions
+  (`ES-GA  Galicia`). A name that fits several countries lists them.
+- `add` checks as the form does: the area has to be on the list, and the
+  instance has to answer as a Meshview. With `--force` it is added even if it
+  does not answer now, and the rounds read it from then on. If it never
+  answers, the cleanup takes it offline and in time deletes it, as any other.
+- `remove` deletes an instance with its nodes and its history. Anyone may add
+  it again from the site.
+- `disable` keeps an instance in the database but takes it off the site: it is
+  not shown, not read and not cleaned up, and the form refuses it. What it had
+  is kept. `enable` puts it back and reads it at once; the cleanup counts from
+  then, so one that was offline gets its days again.
+
+None of this sends notifications: the admin is the one doing it. With the
+container, run it inside, where it has the same configuration and database:
+`podman exec planet meshview-planet instance list`.
 
 ## Notifications
 

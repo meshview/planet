@@ -224,6 +224,7 @@ async fn node_link(State(state): State<AppState>, params: Params) -> Result<Resp
         .map_err(|_| ApiError::not_found("not an instance on the list"))?;
     let instance = db::instance_by_url(&state.pool, &url)
         .await?
+        .filter(|instance| instance.disabled_at.is_none())
         .ok_or_else(|| ApiError::not_found("not an instance on the list"))?;
     let target = format!("{}/node/{node_id}", instance.url);
     Ok((StatusCode::FOUND, [(LOCATION, target)]).into_response())

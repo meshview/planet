@@ -80,7 +80,7 @@ impl Collector {
 
     /// Reads every instance once.
     pub async fn collect_all(&self, now: i64) -> Result<Report> {
-        let instances = db::instances(&self.pool).await?;
+        let instances = db::enabled_instances(&self.pool).await?;
         let results: Vec<Option<usize>> = stream::iter(instances)
             .map(|instance| self.collect_one(instance, now))
             .buffer_unordered(self.settings.concurrency as usize)
@@ -102,7 +102,7 @@ impl Collector {
 
     /// Reads one instance and records the outcome. Answers how many nodes it
     /// has, or `None` if it could not be read.
-    async fn collect_one(&self, instance: Instance, now: i64) -> Option<usize> {
+    pub async fn collect_one(&self, instance: Instance, now: i64) -> Option<usize> {
         let outcome = meshview::probe(&self.client, &instance.url, self.settings.days_active).await;
         let recorded = match &outcome {
             Ok(snapshot) => {

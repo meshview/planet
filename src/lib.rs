@@ -6,6 +6,7 @@
 //! A library as well as a binary only so that the integration tests under
 //! `tests/` can reach the pieces; nothing else is meant to depend on it.
 
+pub mod admin;
 pub mod app;
 pub mod areas;
 pub mod collector;

@@ -110,6 +110,8 @@ pub enum Rejection {
     Area(AreaError),
     /// The URL is already listed.
     Duplicate,
+    /// The admin has disabled the instance: it is not to be added again.
+    Blocked,
     /// It did not answer as a Meshview.
     Probe(ProbeError),
     /// Something on this side failed.
@@ -124,6 +126,7 @@ impl fmt::Display for Rejection {
             Self::Url(e) => write!(f, "URL: {e}"),
             Self::Area(e) => write!(f, "area: {e}"),
             Self::Duplicate => f.write_str("this instance is already listed"),
+            Self::Blocked => f.write_str("this instance is not accepted here"),
             Self::Probe(e) => write!(f, "the instance {e}"),
             Self::Internal(e) => write!(f, "internal error: {e:#}"),
         }
@@ -145,12 +148,14 @@ pub async fn submit(
     let (country, region) = Areas::get()
         .check(&submission.country, submission.region.as_deref())
         .map_err(Rejection::Area)?;
-    if db::instance_by_url(pool, &url)
+    if let Some(listed) = db::instance_by_url(pool, &url)
         .await
         .map_err(Rejection::Internal)?
-        .is_some()
     {
-        return Err(Rejection::Duplicate);
+        return Err(match listed.disabled_at {
+            Some(_) => Rejection::Blocked,
+            None => Rejection::Duplicate,
+        });
     }
 
     let snapshot = meshview::probe(collector.client(), &url, collector.settings().days_active)

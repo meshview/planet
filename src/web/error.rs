@@ -18,8 +18,8 @@ pub struct ErrorBody {
     pub error: String,
     /// What was wrong, for a program: `bad_request`, `invalid_url`,
     /// `private_address`, `area_required`, `unknown_country`, `unknown_region`,
-    /// `duplicate`, `not_meshview`, `rate_limited`, `disabled`, `not_found` or
-    /// `internal`.
+    /// `duplicate`, `blocked`, `not_meshview`, `rate_limited`, `disabled`,
+    /// `not_found` or `internal`.
     #[schema(example = "unknown_country")]
     pub code: &'static str,
 }
