@@ -84,11 +84,18 @@
     try { if (localStorage.getItem(STYLE_KEY) === "grey") style = "grey"; } catch {}
     (style === "grey" ? grey : standard).addTo(map);
     map.getContainer().classList.toggle("is-grey", style === "grey");
-    L.control.layers({
+    const layers = L.control.layers({
         [MeshI18n.t("Standard map")]: standard,
         [MeshI18n.t("Grey map")]: grey,
     }, null, {position: "topright"}).addTo(map);
+    // Opened by a click (or Enter) only, not by passing the mouse over it;
+    // a click on the map, or choosing a style, closes it.
+    L.DomEvent.off(layers.getContainer(), {
+        mouseenter: layers._expandSafely,
+        mouseleave: layers.collapse,
+    }, layers);
     map.on("baselayerchange", event => {
+        layers.collapse();
         const isGrey = event.layer === grey;
         map.getContainer().classList.toggle("is-grey", isGrey);
         try { localStorage.setItem(STYLE_KEY, isGrey ? "grey" : "standard"); } catch {}
