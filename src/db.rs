@@ -275,6 +275,157 @@ pub async fn daily_counts(pool: &SqlitePool, instance: i64) -> Result<Vec<(Strin
         .collect())
 }
 
+/// A fingerprint of everything the web answers from: it changes whenever an
+/// instance is added, collected (well or not), marked offline or deleted, and
+/// nothing the web shows changes without one of those. One pass over a table
+/// of tens of rows, so cheap enough to ask before every cached answer, and
+/// right even when another process (an import) wrote.
+pub async fn fingerprint(pool: &SqlitePool) -> Result<String> {
+    let row = sqlx::query(
+        "SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(SUM(last_attempt_at), 0),
+             COALESCE(SUM(offline_since), 0)
+         FROM instance",
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok(format!(
+        "{}-{}-{}-{}",
+        row.get::<i64, _>(0),
+        row.get::<i64, _>(1),
+        row.get::<i64, _>(2),
+        row.get::<i64, _>(3)
+    ))
+}
+
+/// Which nodes to read.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct NodeFilter {
+    /// Only those seen since, in microseconds.
+    pub seen_since_us: i64,
+    pub country: Option<String>,
+    pub region: Option<String>,
+    pub channel: Option<String>,
+    pub instance_url: Option<String>,
+}
+
+/// A node with the instance it comes from.
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
+pub struct NodeRow {
+    pub instance_url: String,
+    pub country: String,
+    pub region: Option<String>,
+    pub node_id: i64,
+    pub long_name: Option<String>,
+    pub short_name: Option<String>,
+    pub hw_model: Option<String>,
+    pub firmware: Option<String>,
+    pub role: Option<String>,
+    pub channel: Option<String>,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
+    pub is_mqtt_gateway: Option<bool>,
+    pub first_seen_us: Option<i64>,
+    pub last_seen_us: Option<i64>,
+}
+
+/// The nodes of the instances that are online, with or without a position.
+/// One pass over the nodes, in the order of their key: a node seen recently
+/// enough is most of them, so walking an index on when it was seen would only
+/// add lookups.
+pub async fn nodes(pool: &SqlitePool, filter: &NodeFilter) -> Result<Vec<NodeRow>> {
+    let mut query = QueryBuilder::new(
+        "SELECT i.url AS instance_url, i.country, i.region, n.node_id, n.long_name,
+             n.short_name, n.hw_model, n.firmware, n.role, n.channel, n.lat, n.lon,
+             n.is_mqtt_gateway, n.first_seen_us, n.last_seen_us
+         FROM node n JOIN instance i ON i.id = n.instance_id
+         WHERE i.offline_since IS NULL AND n.last_seen_us >= ",
+    );
+    query.push_bind(filter.seen_since_us);
+    if let Some(country) = &filter.country {
+        query.push(" AND i.country = ").push_bind(country);
+    }
+    if let Some(region) = &filter.region {
+        query.push(" AND i.region = ").push_bind(region);
+    }
+    if let Some(channel) = &filter.channel {
+        query.push(" AND n.channel = ").push_bind(channel);
+    }
+    if let Some(url) = &filter.instance_url {
+        query.push(" AND i.url = ").push_bind(url);
+    }
+    query.push(" ORDER BY n.instance_id, n.node_id");
+    Ok(query.build_query_as().fetch_all(pool).await?)
+}
+
+/// An instance with its figures, for the list.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct InstanceSummary {
+    #[sqlx(flatten)]
+    pub instance: Instance,
+    pub node_count: i64,
+    pub mapped_count: i64,
+    /// The first and the latest daily count since the trend's start, if any.
+    pub trend_start: Option<i64>,
+    pub trend_end: Option<i64>,
+}
+
+/// Every instance with its node counts and its trend since `trend_since` (a
+/// date): online first, then by nodes. The counts come from one grouped pass
+/// over the nodes, and the trend from the history's key, two rows each.
+pub async fn instance_summaries(
+    pool: &SqlitePool,
+    trend_since: &str,
+) -> Result<Vec<InstanceSummary>> {
+    Ok(sqlx::query_as(
+        "SELECT i.*,
+             COALESCE(n.node_count, 0) AS node_count,
+             COALESCE(n.mapped_count, 0) AS mapped_count,
+             (SELECT d.node_count FROM instance_daily d
+              WHERE d.instance_id = i.id AND d.date >= ?1
+              ORDER BY d.date LIMIT 1) AS trend_start,
+             (SELECT d.node_count FROM instance_daily d
+              WHERE d.instance_id = i.id AND d.date >= ?1
+              ORDER BY d.date DESC LIMIT 1) AS trend_end
+         FROM instance i
+         LEFT JOIN (
+             SELECT instance_id, COUNT(*) AS node_count, COUNT(lat) AS mapped_count
+             FROM node GROUP BY instance_id
+         ) n ON n.instance_id = i.id
+         ORDER BY i.offline_since IS NOT NULL, node_count DESC, i.id",
+    )
+    .bind(trend_since)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// A daily count.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct DailyRow {
+    pub instance_id: i64,
+    pub date: String,
+    pub node_count: i64,
+    pub recorded_at: i64,
+}
+
+/// The daily counts between two dates, both included, by instance and date:
+/// the history's key order, so read without sorting.
+pub async fn daily_between(pool: &SqlitePool, from: &str, to: &str) -> Result<Vec<DailyRow>> {
+    Ok(sqlx::query_as(
+        "SELECT instance_id, date, node_count, recorded_at FROM instance_daily
+         WHERE date >= ? AND date <= ?
+         ORDER BY instance_id, date",
+    )
+    .bind(from)
+    .bind(to)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// The UTC date `days` days before a moment's, as YYYY-MM-DD.
+pub fn utc_date_days_before(unix_seconds: i64, days: i64) -> String {
+    utc_date(unix_seconds - days * 86_400)
+}
+
 /// The UTC date of a moment in unix seconds, as YYYY-MM-DD.
 pub fn utc_date(unix_seconds: i64) -> String {
     jiff::Timestamp::from_second(unix_seconds)

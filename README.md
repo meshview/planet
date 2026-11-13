@@ -26,6 +26,14 @@ The configuration is `config.toml` (see `sample.config.toml`), or environment
 variables as `MESHVIEW_PLANET_<SECTION>__<KEY>`. Other commands: `collect` (one
 round now), `migrate`, and `--help`.
 
+## API
+
+Documented at `/api/docs` (OpenAPI at `/api/openapi.json`), under `/api/v1`:
+nodes, instances (and adding one), their daily history, and the areas to choose
+from. The old site's addresses (`/api/nodes`, `/api/instances`,
+`/api/histogram`, `/out/node-link`) keep answering in its shapes. Reads are
+open to any web page, and carry an ETag that changes only with the data.
+
 ## Development
 
 ```sh

@@ -104,7 +104,11 @@ async fn version(State(b): State<Behaviour>) -> Response {
     }
 }
 
+/// Nodes heard an hour ago, by the real clock, except every fifth, heard
+/// twenty days ago: the web counts days back from now.
 fn nodes_body(count: usize) -> serde_json::Value {
+    let now_us = meshview_planet::collector::unix_now() * 1_000_000;
+    let hour_us = 3_600 * 1_000_000;
     let nodes: Vec<_> = (0..count)
         .map(|i| {
             // Every third node has no position.
@@ -126,7 +130,11 @@ fn nodes_body(count: usize) -> serde_json::Value {
                 "channel": "LongFast",
                 "is_mqtt_gateway": i == 0,
                 "first_seen_us": 1_700_000_000_000_000_i64,
-                "last_seen_us": 1_794_000_000_000_000_i64,
+                "last_seen_us": if i % 5 == 4 {
+                    now_us - 20 * 24 * hour_us
+                } else {
+                    now_us - hour_us
+                },
             })
         })
         .collect();

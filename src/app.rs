@@ -5,11 +5,9 @@
 
 use crate::collector::{Collector, unix_now};
 use crate::config::Config;
-use crate::submit::RateLimiter;
 use crate::web::{self, AppState};
 use crate::{db, import};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::signal::unix::{SignalKind, signal};
@@ -38,12 +36,7 @@ pub async fn run_until(config: Config, stopping: watch::Receiver<bool>) -> Resul
         .with_context(|| format!("binding {addr}"))?;
     info!("listening on http://{addr}");
 
-    let state = AppState {
-        pool: pool.clone(),
-        collector: collector.clone(),
-        limiter: Arc::new(RateLimiter::new(config.submissions.per_ip_per_hour)),
-        config: Arc::new(config),
-    };
+    let state = AppState::new(pool.clone(), collector.clone(), config);
     let mut server_stopping = stopping.clone();
     let server = tokio::spawn(async move {
         axum::serve(
