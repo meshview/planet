@@ -39,9 +39,10 @@ enum Command {
     Run,
     /// Collect from every instance once, and exit.
     Collect,
-    /// Add the instances another site lists, and exit.
+    /// Add the instances another site lists, with their history, and exit.
     Import {
-        /// Where to read the list from, the site's /api/instances.
+        /// Where to read the list from, the site's /api/instances; the history
+        /// is read beside it, from /api/histogram.
         source: String,
     },
     /// Create the database or bring its schema up to date, and exit.

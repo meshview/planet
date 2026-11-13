@@ -8,7 +8,7 @@ instances, writing one SQLite file. There is nothing else to run beside it.
 | Command | |
 |---|---|
 | `meshview-planet run` | Serve the web and collect, until stopped. |
-| `meshview-planet import <url>` | Add the instances another site lists at `<url>`, its `/api/instances`, and exit. |
+| `meshview-planet import <url>` | Add the instances another site lists at `<url>`, its `/api/instances`, with their history, and exit. |
 | `meshview-planet collect` | One collection round now, with its cleanup, and exit. |
 | `meshview-planet migrate` | Create the database or bring its schema up to date, and exit. `run` does this by itself. |
 | `meshview-planet areas [country]` | List the countries to choose from or, given one, its regions, and exit. |
@@ -46,7 +46,13 @@ The import maps each instance listed to an area from the list (the original
 kept free text), by its URL, from the instances known when this was written.
 It does not ask the instances anything: the first collection round, at start
 (as none has run yet), does. One the import does not know an area for is left
-out with a warning, to be added from the web like any other. Running it twice adds nothing twice.
+out with a warning, to be added from the web like any other.
+
+It brings their history too, the count of nodes of each day, from the
+`/api/histogram` beside the list, so that the chart and the trends do not
+start empty. A day with no nodes counted was a day the instance did not
+answer, and is left out. Running it twice adds nothing twice, and a day
+already collected here is kept as it is.
 
 ## The binary
 

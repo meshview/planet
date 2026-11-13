@@ -347,6 +347,34 @@ pub async fn daily_counts(pool: &SqlitePool, instance: i64) -> Result<Vec<(Strin
         .collect())
 }
 
+/// Adds days of an instance's history it did not have, as (date, count,
+/// recorded at): a day it has already is kept as it is. Answers how many were
+/// added.
+pub async fn add_daily_counts(
+    pool: &SqlitePool,
+    instance: i64,
+    days: &[(String, i64, i64)],
+) -> Result<u64> {
+    let mut tx = pool.begin().await?;
+    let mut added = 0;
+    for (date, count, recorded_at) in days {
+        added += sqlx::query(
+            "INSERT INTO instance_daily (instance_id, date, node_count, recorded_at)
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT (instance_id, date) DO NOTHING",
+        )
+        .bind(instance)
+        .bind(date)
+        .bind(count)
+        .bind(recorded_at)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+    }
+    tx.commit().await?;
+    Ok(added)
+}
+
 /// A fingerprint of everything the web answers from: it changes whenever an
 /// instance is added, collected (well or not), marked offline, disabled or
 /// enabled, or deleted, and

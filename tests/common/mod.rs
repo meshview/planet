@@ -57,6 +57,7 @@ impl Instance {
             .route("/api/v1/nodes", get(v1_nodes))
             .route("/api/nodes", get(legacy_nodes))
             .route("/api/instances", get(old_instances))
+            .route("/api/histogram", get(old_histogram))
             .fallback(get(fallback))
             .with_state(behaviour.clone());
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -180,6 +181,25 @@ async fn old_instances() -> Response {
         {"name": "Somewhere new", "url": "https://meshview.example.org"},
         {"name": "Broken", "url": "ftp://nope"},
     ]}))
+    .into_response()
+}
+
+/// The old site's history: two good days, a day it read no nodes, which was
+/// a failure, a date of no form, and an instance not imported.
+async fn old_histogram() -> Response {
+    axum::Json(
+        json!({"days": 3650, "start_date": "2016-11-16", "end_date": "2026-11-13", "instances": [
+            {"name": "San Francisco Bay Area", "url": "https://meshview.bayme.sh", "points": [
+                {"date": "2026-11-10", "node_count": 120, "recorded_at": 1_794_300_000},
+                {"date": "2026-11-11", "node_count": 0, "recorded_at": 1_794_390_000},
+                {"date": "11/12/2026", "node_count": 130, "recorded_at": 1_794_480_000},
+                {"date": "2026-11-13", "node_count": 125, "recorded_at": 1_794_570_000},
+            ]},
+            {"name": "Somewhere new", "url": "https://meshview.example.org", "points": [
+                {"date": "2026-11-13", "node_count": 9, "recorded_at": 1_794_570_000},
+            ]},
+        ]}),
+    )
     .into_response()
 }
 

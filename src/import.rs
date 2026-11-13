@@ -10,6 +10,11 @@
 //! a warning, to be submitted from the web like any other. Imported instances
 //! are not probed: the collector reads them on its next round, and those that
 //! never answer are cleaned up like any other.
+//!
+//! Their history comes too, from the `/api/histogram` beside the list: a count
+//! of nodes for each instance and day. A day with no nodes counted was a day
+//! the instance did not answer, so it is left out, a gap here as such a day
+//! is. A day already here is kept as it is.
 
 use crate::areas::Areas;
 use crate::db;
@@ -114,6 +119,9 @@ pub const KNOWN: &[(&str, &str, Option<&str>)] = &[
     ("https://meshview.zr1rf.za.net", "ZA", Some("ZA-WC")),
 ];
 
+/// How far back the history is asked for: all of it.
+const HISTORY_DAYS: u32 = 3650;
+
 #[derive(Deserialize)]
 struct InstancesBody {
     instances: Vec<OldInstance>,
@@ -125,12 +133,35 @@ struct OldInstance {
     url: String,
 }
 
+#[derive(Deserialize)]
+struct HistogramBody {
+    instances: Vec<OldSeries>,
+}
+
+#[derive(Deserialize)]
+struct OldSeries {
+    url: String,
+    points: Vec<OldPoint>,
+}
+
+#[derive(Deserialize)]
+struct OldPoint {
+    date: String,
+    node_count: i64,
+    recorded_at: Option<i64>,
+}
+
 /// What an import did.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Imported {
     pub added: usize,
     pub already_there: usize,
     pub unknown: Vec<String>,
+    /// Days of history added, over every instance.
+    pub days: u64,
+    /// Why the history could not be read, if it could not: the instances are
+    /// in all the same.
+    pub history_error: Option<String>,
 }
 
 /// Reads the list from `source` and adds the instances it knows an
@@ -181,7 +212,79 @@ pub async fn import(
             None => imported.already_there += 1,
         }
     }
+
+    match history_source(source) {
+        Some(history) => match import_history(pool, client, &history, allow_private, now).await {
+            Ok(days) => imported.days = days,
+            Err(e) => {
+                warn!("the history was not imported: {e:#}");
+                imported.history_error = Some(format!("{e:#}"));
+            }
+        },
+        None => {
+            imported.history_error = Some(format!(
+                "{source} does not end in /api/instances, so where the history is is not known"
+            ));
+        }
+    }
     Ok(imported)
+}
+
+/// Where the history is served, beside the list.
+fn history_source(source: &str) -> Option<String> {
+    let base = source
+        .trim_end_matches('/')
+        .strip_suffix("/api/instances")?;
+    Some(format!("{base}/api/histogram?days={HISTORY_DAYS}"))
+}
+
+/// Adds the days of the history of the instances listed here.
+async fn import_history(
+    pool: &SqlitePool,
+    client: &Client,
+    source: &str,
+    allow_private: bool,
+    now: i64,
+) -> Result<u64> {
+    let body = client
+        .get(source)
+        .await
+        .with_context(|| format!("reading {source}"))?;
+    let history: HistogramBody =
+        serde_json::from_slice(&body).with_context(|| format!("{source} is not the history"))?;
+    let mut added = 0;
+    for series in history.instances {
+        let Ok(url) = check_url(&series.url, allow_private) else {
+            continue;
+        };
+        let Some(instance) = db::instance_by_url(pool, &url).await? else {
+            continue;
+        };
+        let days: Vec<(String, i64, i64)> = series
+            .points
+            .into_iter()
+            .filter(|point| point.node_count > 0 && is_date(&point.date))
+            .map(|point| {
+                (
+                    point.date,
+                    point.node_count,
+                    point.recorded_at.unwrap_or(now),
+                )
+            })
+            .collect();
+        let count = db::add_daily_counts(pool, instance.id, &days).await?;
+        if count > 0 {
+            info!("{count} days of history for {url}");
+        }
+        added += count;
+    }
+    Ok(added)
+}
+
+/// A date as the history keeps them, YYYY-MM-DD.
+fn is_date(text: &str) -> bool {
+    text.parse::<jiff::civil::Date>()
+        .is_ok_and(|date| date.to_string() == text)
 }
 
 #[cfg(test)]
@@ -203,5 +306,26 @@ mod tests {
         urls.sort();
         urls.dedup();
         assert_eq!(urls.len(), KNOWN.len(), "a URL is there twice");
+    }
+
+    #[test]
+    fn the_history_is_beside_the_list() {
+        assert_eq!(
+            history_source("https://planet.example.org/api/instances").as_deref(),
+            Some("https://planet.example.org/api/histogram?days=3650")
+        );
+        assert_eq!(
+            history_source("http://127.0.0.1:9/api/instances/").as_deref(),
+            Some("http://127.0.0.1:9/api/histogram?days=3650")
+        );
+        assert_eq!(history_source("https://example.org/list.json"), None);
+    }
+
+    #[test]
+    fn dates_are_checked() {
+        assert!(is_date("2026-03-05"));
+        for bad in ["2026-3-5", "2026-02-30", "yesterday", "2026-03-05T00:00:00"] {
+            assert!(!is_date(bad), "{bad}");
+        }
     }
 }

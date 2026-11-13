@@ -14,7 +14,7 @@ the integration tests under `tests/` can reach the pieces.
 | `src/meshview.rs` | Reading an instance: its `/version` and its nodes, from either API. |
 | `src/collector.rs` | The collection rounds and the cleanup. |
 | `src/submit.rs` | Adding an instance from the web, and the limit per address. |
-| `src/import.rs` | Seeding the list from another site, and the areas of its instances. |
+| `src/import.rs` | Seeding the list and its history from another site, and the areas of its instances. |
 | `src/admin.rs` | The `instance` and `areas` commands: managing instances from the command line. |
 | `src/term.rs` | Colour for what the commands print, and how long ago things were. |
 | `src/areas.rs` | The closed list of areas, from `assets/areas.json`. |

@@ -173,9 +173,34 @@ async fn the_import_adds_the_instances_it_knows_an_area_for() {
     assert_eq!(stored[0].region.as_deref(), Some("US-CA"));
     assert_eq!(stored[0].added_at, NOW);
 
+    // With its history, but for the day it read no nodes and the one of no
+    // form.
+    assert_eq!((imported.days, imported.history_error), (2, None));
+    assert_eq!(
+        db::daily_counts(&pool, stored[0].id).await.unwrap(),
+        [
+            ("2026-11-10".to_string(), 120),
+            ("2026-11-13".to_string(), 125)
+        ]
+    );
+
     // Twice is harmless.
     let again = import::import(&pool, collector.client(), &source, true, NOW)
         .await
         .unwrap();
-    assert_eq!((again.added, again.already_there), (0, 1));
+    assert_eq!((again.added, again.already_there, again.days), (0, 1, 0));
+}
+
+#[tokio::test]
+async fn the_import_does_without_the_history() {
+    // A list read from somewhere else: no history beside it.
+    let old_site = Instance::start(Kind::Rust, 0).await;
+    let (_dir, pool, collector) = planet(settings()).await;
+    let source = format!("{}/api/instances?copy", old_site.url);
+    let imported = import::import(&pool, collector.client(), &source, true, NOW)
+        .await
+        .unwrap();
+    assert_eq!(imported.added, 1);
+    assert_eq!(imported.days, 0);
+    assert!(imported.history_error.unwrap().contains("not known"));
 }

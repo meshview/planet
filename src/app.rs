@@ -136,6 +136,10 @@ pub async fn import(config: Config, source: &str) -> Result<()> {
     for url in &imported.unknown {
         println!("left out, with no area known for it: {url}");
     }
+    match &imported.history_error {
+        None => println!("{} days of history added", imported.days),
+        Some(error) => println!("the history was not imported: {error}"),
+    }
     Ok(())
 }
 
