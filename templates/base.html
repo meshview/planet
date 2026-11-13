@@ -167,6 +167,7 @@ body { min-height:100dvh; display:flex; flex-direction:column; }
             <a href="/api/docs" target="_blank" rel="noopener">API<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
             <a href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener">Meshview<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
         </nav>
+        {% block header_extra %}{% endblock %}
         <div class="mesh-header-tools">
             <nav class="mesh-languages" aria-label="{{ "Language" | tr }}">
                 <a href="?lang=en" hreflang="en" lang="en" title="English"{% if ui_language == "en" %} aria-current="true"{% endif %}>EN</a>

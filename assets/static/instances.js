@@ -62,10 +62,76 @@
         </tr>`;
     }
 
+    // Sorting by a column. Whatever the column, the instances that answer come
+    // first, then those that did not answer the latest time, then those that
+    // are offline; without a column, the list is in the server's order.
+    const collator = new Intl.Collator(language, {numeric: true, sensitivity: "base"});
+    const trendOf = instance => {
+        const {start_count: start, end_count: end} = instance.trend_30d;
+        return start ? (end - start) / start : null;
+    };
+    const SORTS = {
+        area: {text: true, key: areaOf},
+        url: {text: true, key: instance => hostOf(instance.url)},
+        // Numbered versions before named ones ("plus 1.0.0"), either way.
+        version: {text: true, key: instance => instance.version, first: version => /^\d/.test(version) ? 0 : 1},
+        nodes: {key: instance => instance.node_count},
+        mapped: {key: instance => instance.mapped_count},
+        trend: {key: trendOf},
+        collected: {key: instance => instance.last_success_at},
+        // Within each group, by area.
+        status: {text: true, key: areaOf},
+    };
+    let listed = [];
+    let sort = {column: null, descending: false};
+
+    function compare(a, b) {
+        const tier = instance => instance.status === "offline" ? 2 : failing(instance) ? 1 : 0;
+        const group = tier(a) - tier(b);
+        if (group || !sort.column) return group;
+        const {text, key, first} = SORTS[sort.column];
+        const [x, y] = [key(a), key(b)];
+        // Nothing to sort by goes last, whichever the direction.
+        if (x == null || x === "") return y == null || y === "" ? 0 : 1;
+        if (y == null || y === "") return -1;
+        const block = first ? first(x) - first(y) : 0;
+        if (block) return block;
+        const order = text ? collator.compare(String(x), String(y)) : x - y;
+        return sort.descending ? -order : order;
+    }
+
+    function renderList() {
+        const body = document.getElementById("instance-rows");
+        const ordered = listed.map((instance, index) => ({instance, index}))
+            .sort((a, b) => compare(a.instance, b.instance) || a.index - b.index)
+            .map(({instance}) => instance);
+        body.innerHTML = ordered.length
+            ? ordered.map(row).join("")
+            : `<tr><td colspan="8" class="planet-empty">${MeshI18n.h("No instances yet.")}</td></tr>`;
+        document.querySelectorAll(".planet-table th[data-sort]").forEach(th => {
+            const state = th.dataset.sort !== sort.column ? "none" : sort.descending ? "descending" : "ascending";
+            th.setAttribute("aria-sort", state);
+        });
+    }
+
+    document.querySelectorAll(".planet-table th[data-sort]").forEach(th => {
+        th.querySelector("button").addEventListener("click", () => {
+            const column = th.dataset.sort;
+            if (sort.column === column) {
+                sort.descending = !sort.descending;
+            } else {
+                // Names from A, figures and times from the largest.
+                sort = {column, descending: !SORTS[column].text};
+            }
+            renderList();
+        });
+    });
+
     async function loadList() {
         const body = document.getElementById("instance-rows");
         try {
             const {instances} = await getJson("/api/v1/instances");
+            listed = instances;
             const online = instances.filter(instance => instance.status === "online");
             const answering = online.filter(instance => !failing(instance));
             document.getElementById("metric-online").textContent = formatNumber(answering.length);
@@ -75,9 +141,7 @@
             document.getElementById("metric-countries").textContent =
                 formatNumber(new Set(online.map(instance => instance.country)).size);
             document.getElementById("list-count").textContent = formatNumber(instances.length);
-            body.innerHTML = instances.length
-                ? instances.map(row).join("")
-                : `<tr><td colspan="8" class="planet-empty">${MeshI18n.h("No instances yet.")}</td></tr>`;
+            renderList();
         } catch (error) {
             console.error(error);
             body.innerHTML = `<tr><td colspan="8" class="planet-empty">${MeshI18n.h("The instances could not be loaded. Try again in a while.")}</td></tr>`;

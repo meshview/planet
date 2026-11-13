@@ -48,7 +48,11 @@ body { background:var(--mesh-page); color:var(--mesh-text); }
 [data-bs-theme="dark"] .mesh-theme-toggle .theme-icon--sun { display:block; }
 [data-bs-theme="dark"] .mesh-theme-toggle .theme-icon--moon { display:none; }
 .mesh-theme-toggle:focus-visible { outline:2px solid white; outline-offset:3px; }
-[data-bs-theme="dark"] .leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.85) saturate(.75); }
+/* The tiles are made dark by inverting them, as Meshview does. The grey map
+   is the same tiles without their colours, so that the nodes' stand out. */
+[data-bs-theme="dark"] .leaflet-container:not(.is-grey) .leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.85) saturate(.75); }
+.leaflet-container.is-grey .leaflet-tile-pane { filter:grayscale(1) brightness(1.04); }
+[data-bs-theme="dark"] .leaflet-container.is-grey .leaflet-tile-pane { filter:invert(1) grayscale(1) brightness(1.5) contrast(.8); }
 [data-bs-theme="dark"] :is(.leaflet-container,.leaflet-control-layers,.leaflet-bar a,.leaflet-popup-content-wrapper,.leaflet-popup-tip,.leaflet-tooltip,.leaflet-control-attribution,.leaflet-control-scale-line) { background:var(--mesh-surface); color:var(--mesh-text); border-color:var(--mesh-border); }
 [data-bs-theme="dark"] :is(.leaflet-control-layers label,.leaflet-popup-close-button) { color:var(--mesh-text); }
 [data-bs-theme="dark"] :is(.leaflet-bar a:hover,.leaflet-control-layers-expanded) { background:var(--mesh-stripe); }

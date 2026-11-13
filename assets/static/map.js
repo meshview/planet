@@ -68,10 +68,70 @@
 
     // The map.
     const map = L.map("map", {preferCanvas: true, zoomSnap: 0.5, worldCopyJump: true}).setView([25, 0], 2);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+
+    // Two looks for the map, both OpenStreetMap's tiles: as they are, and in
+    // grey, without the greens and blues of the land and the sea, against
+    // which the nodes' colours stand out. The grey is a filter on the tiles
+    // (see theme-styles.html), so both share the tiles the browser has.
+    const STYLE_KEY = "meshview-planet-map-style";
+    const tiles = () => L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+    });
+    const standard = tiles();
+    const grey = tiles();
+    let style = "standard";
+    try { if (localStorage.getItem(STYLE_KEY) === "grey") style = "grey"; } catch {}
+    (style === "grey" ? grey : standard).addTo(map);
+    map.getContainer().classList.toggle("is-grey", style === "grey");
+    L.control.layers({
+        [MeshI18n.t("Standard map")]: standard,
+        [MeshI18n.t("Grey map")]: grey,
+    }, null, {position: "topright"}).addTo(map);
+    map.on("baselayerchange", event => {
+        const isGrey = event.layer === grey;
+        map.getContainer().classList.toggle("is-grey", isGrey);
+        try { localStorage.setItem(STYLE_KEY, isGrey ? "grey" : "standard"); } catch {}
+    });
+
+    // Full screen: only the header, the map and the channels.
+    const FullScreen = L.Control.extend({
+        options: {position: "topleft"},
+        onAdd() {
+            const bar = L.DomUtil.create("div", "leaflet-bar");
+            const button = L.DomUtil.create("button", "planet-map-button", bar);
+            button.type = "button";
+            const icon = L.DomUtil.create("span", "ti", button);
+            icon.setAttribute("aria-hidden", "true");
+            L.DomEvent.disableClickPropagation(bar);
+            L.DomEvent.on(button, "click", () => setFull(!document.body.classList.contains("is-map-full")));
+            this.update = full => {
+                const label = full ? MeshI18n.t("Leave full screen") : MeshI18n.t("Full screen map");
+                button.title = label;
+                button.setAttribute("aria-label", label);
+                button.setAttribute("aria-pressed", String(full));
+                icon.className = `ti ${full ? "ti-arrows-minimize" : "ti-arrows-maximize"}`;
+            };
+            this.update(false);
+            return bar;
+        },
+    });
+    const fullScreen = new FullScreen().addTo(map);
+    const header = document.querySelector(".mesh-header");
+    function setFull(full) {
+        document.body.classList.toggle("is-map-full", full);
+        document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
+        header.classList.remove("is-hidden");
+        fullScreen.update(full);
+        map.invalidateSize();
+        saveState();
+    }
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && document.body.classList.contains("is-map-full")) setFull(false);
+    });
+    window.addEventListener("resize", () => {
+        document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
+    });
     const clusters = L.markerClusterGroup({
         chunkedLoading: true,
         maxClusterRadius: 45,
@@ -158,6 +218,8 @@
             new Set([...sources].map(url => instances.get(url)?.country).filter(Boolean)).size);
         document.getElementById("metric-nodes").textContent = formatNumber(heard);
         document.getElementById("metric-mapped").textContent = formatNumber(mapped);
+        document.getElementById("header-nodes").textContent = formatNumber(heard);
+        document.getElementById("header-mapped").textContent = formatNumber(mapped);
         renderChannels(scoped);
         if (fit && shown.length) {
             map.fitBounds(L.latLngBounds(shown.map(marker => marker.getLatLng())), {padding: [30, 30], maxZoom: 11});
@@ -233,6 +295,7 @@
         set("days", daysSelect.value, daysSelect.dataset.default);
         set("country", countrySelect.value, "");
         set("instance", instanceSelect.value, "");
+        set("full", document.body.classList.contains("is-map-full") ? "1" : "", "");
         url.searchParams.delete("lang");
         history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
@@ -282,6 +345,7 @@
     }
 
     fillDays();
+    if (params.get("full") === "1") setFull(true);
     daysSelect.addEventListener("change", () => load());
     countrySelect.addEventListener("change", () => {
         fillInstances();

@@ -30,6 +30,8 @@
     "files": [
       "icons/outline/access-point.svg",
       "icons/outline/activity.svg",
+      "icons/outline/arrows-maximize.svg",
+      "icons/outline/arrows-minimize.svg",
       "icons/outline/brand-github.svg",
       "icons/outline/bug.svg",
       "icons/outline/chart-line.svg",
@@ -44,8 +46,8 @@
       "icons/outline/refresh.svg",
       "icons/outline/router.svg",
       "icons/outline/search.svg",
-      "icons/outline/world.svg",
       "icons/outline/world-www.svg",
+      "icons/outline/world.svg",
       "icons/outline/x.svg",
       "LICENSE"
     ]
