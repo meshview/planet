@@ -63,6 +63,7 @@ a path. The log says which variables were used, by name, at start.
 |---|---|---|
 | `bind` | `"*"` | The address to listen on. `*` is every interface, IPv4; `::` every one, IPv6 and IPv4. |
 | `port` | `8080` | The port. |
+| `domain` | `""` | The address the site is reached at, as `planet.example.org` (HTTPS is assumed unless it starts with `http://`). Link previews, the card a chat or social network shows for a shared link, take their picture from it, `/static/og.png`, as they need an absolute address. Empty, it is taken from each request's `Host` (and, with `behind_proxy`, `X-Forwarded-Proto`). It does not configure binding or TLS. |
 | `behind_proxy` | `false` | Take the client's address from the last entry of `X-Forwarded-For`, for the submission limit. Only behind a reverse proxy that sets it: anyone can send the header to a server that answers directly, and so choose the address they are counted as. |
 
 ### `[database]`

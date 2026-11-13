@@ -125,8 +125,14 @@ location / {
     proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
+
+Link previews, the card a chat or social network shows for a shared link,
+need the site's absolute address for their picture. Set
+[`domain`](configuration.md#server) to it; without it, it is taken from each
+request's `Host` and, with `behind_proxy`, `X-Forwarded-Proto`.
 
 ## Managing instances
 

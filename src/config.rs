@@ -57,6 +57,10 @@ pub struct Server {
     /// submission rate limit. Only behind a reverse proxy that sets it: anyone
     /// can send the header to a server that answers directly.
     pub behind_proxy: bool,
+    /// The address the site is reached at, as `planet.example.org` (HTTPS
+    /// unless it names its scheme), for link previews, which need absolute
+    /// addresses. Empty: taken from each request.
+    pub domain: String,
 }
 
 impl Default for Server {
@@ -65,6 +69,21 @@ impl Default for Server {
             bind: "*".into(),
             port: 8080,
             behind_proxy: false,
+            domain: String::new(),
+        }
+    }
+}
+
+impl Server {
+    /// Where the site is, as `https://planet.example.org`, if configured.
+    pub fn origin(&self) -> Option<String> {
+        let domain = self.domain.trim().trim_end_matches('/');
+        if domain.is_empty() {
+            None
+        } else if domain.starts_with("https://") || domain.starts_with("http://") {
+            Some(domain.to_string())
+        } else {
+            Some(format!("https://{domain}"))
         }
     }
 }

@@ -9,6 +9,9 @@ port = 8080
 # Take the client's address from X-Forwarded-For, for the submission rate
 # limit. Only behind a reverse proxy that sets it.
 behind_proxy = false
+# The address the site is reached at, for link previews (the card a chat
+# shows for a shared link). Empty: taken from each request.
+domain = ""
 
 [database]
 # The SQLite file, created with its schema if it is not there.

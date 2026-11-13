@@ -19,7 +19,7 @@ use anyhow::{Context as _, anyhow};
 use axum::Router;
 use axum::extract::{Path, Request};
 use axum::http::header::{
-    ACCEPT_LANGUAGE, CACHE_CONTROL, CONTENT_TYPE, COOKIE, ETAG, HeaderMap, HeaderValue,
+    ACCEPT_LANGUAGE, CACHE_CONTROL, CONTENT_TYPE, COOKIE, ETAG, HOST, HeaderMap, HeaderValue,
     IF_NONE_MATCH, SET_COOKIE, VARY,
 };
 use axum::http::{StatusCode, Uri};
@@ -118,6 +118,15 @@ fn tera(config: &Config, code: &str) -> anyhow::Result<Tera> {
     globals.insert("offline_days", &collector.offline_after_days.to_string());
     globals.insert("delete_days", &collector.delete_after_days.to_string());
     globals.insert("submissions", &config.submissions.enabled);
+    // Previews need an absolute address: the configured one, or else a mark
+    // that each answer replaces with the request's.
+    globals.insert(
+        "preview_origin",
+        &config
+            .server
+            .origin()
+            .unwrap_or_else(|| ORIGIN_MARK.to_string()),
+    );
     globals.insert("per_hour", &config.submissions.per_ip_per_hour);
     Ok(tera)
 }
@@ -129,6 +138,34 @@ fn format_hours(minutes: u32) -> String {
     } else {
         format!("{:.1}", f64::from(minutes) / 60.0)
     }
+}
+
+/// Stands in a page for the site's address when none is configured, to be
+/// replaced with the one each request was made to.
+const ORIGIN_MARK: &str = "\u{1}origin\u{1}";
+
+/// The address a request was made to, as `https://planet.example.org`, from its
+/// `Host` and, behind a proxy, `X-Forwarded-Proto`. Empty, which leaves the
+/// addresses relative, when the host is not a plain one.
+fn request_origin(headers: &HeaderMap, behind_proxy: bool) -> String {
+    let Some(host) = headers.get(HOST).and_then(|host| host.to_str().ok()) else {
+        return String::new();
+    };
+    let plain = !host.is_empty()
+        && host
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | ':' | '[' | ']'));
+    if !plain {
+        return String::new();
+    }
+    let https = behind_proxy
+        && headers
+            .get("x-forwarded-proto")
+            .and_then(|proto| proto.to_str().ok())
+            .and_then(|proto| proto.split(',').next())
+            .is_some_and(|proto| proto.trim().eq_ignore_ascii_case("https"));
+    let scheme = if https { "https" } else { "http" };
+    format!("{scheme}://{host}")
 }
 
 /// A page, ready to answer.
@@ -239,6 +276,7 @@ fn answer(
     code: &str,
     chosen: bool,
     request: &HeaderMap,
+    behind_proxy: bool,
 ) -> Response {
     let mut headers = HeaderMap::new();
     headers.insert(ETAG, page.etag.clone());
@@ -254,7 +292,13 @@ fn answer(
     if fresh && !chosen && status == StatusCode::OK {
         return (StatusCode::NOT_MODIFIED, headers).into_response();
     }
-    (status, headers, Html(page.html.to_string())).into_response()
+    let html = if page.html.contains(ORIGIN_MARK) {
+        page.html
+            .replace(ORIGIN_MARK, &request_origin(request, behind_proxy))
+    } else {
+        page.html.to_string()
+    };
+    (status, headers, Html(html)).into_response()
 }
 
 /// A file under `/static/`. Our own files are revalidated every time, which
@@ -324,12 +368,14 @@ fn is_versioned_vendor(path: &str) -> bool {
 #[derive(Clone)]
 pub struct Pages {
     rendered: Arc<Rendered>,
+    behind_proxy: bool,
 }
 
 impl Pages {
     pub fn new(config: &Config) -> anyhow::Result<Self> {
         Ok(Self {
             rendered: Arc::new(render(config)?),
+            behind_proxy: config.server.behind_proxy,
         })
     }
 
@@ -338,6 +384,7 @@ impl Pages {
         let mut router = Router::new();
         for (route, template) in ROUTES {
             let rendered = Arc::clone(&self.rendered);
+            let behind_proxy = self.behind_proxy;
             router = router.route(
                 route,
                 get(move |request: Request| async move {
@@ -348,6 +395,7 @@ impl Pages {
                         code,
                         chosen,
                         request.headers(),
+                        behind_proxy,
                     )
                 }),
             );
@@ -378,6 +426,7 @@ impl Pages {
             code,
             chosen,
             request.headers(),
+            self.behind_proxy,
         )
     }
 }
@@ -522,5 +571,60 @@ mod tests {
         }
         let spanish = &rendered.pages[&("instances.html", "es")].html;
         assert!(spanish.contains("Instancias"));
+    }
+
+    #[tokio::test]
+    async fn pages_describe_themselves_for_link_previews() {
+        let mut config = Config::default();
+        config.server.domain = "planet.example.org/".into();
+        let rendered = render(&config).unwrap();
+        let map = &rendered.pages[&("map.html", "en")].html;
+        assert!(map.contains(
+            r#"<meta property="og:image" content="https://planet.example.org/static/og.png">"#
+        ));
+        assert!(map.contains(r#"<meta property="og:title" content="Meshview Planet">"#));
+        assert!(map.contains(r#"<meta name="twitter:card" content="summary_large_image">"#));
+        assert!(map.contains(r#"<meta property="og:locale" content="en_US">"#));
+        let instances = &rendered.pages[&("instances.html", "es")].html;
+        assert!(
+            instances
+                .contains(r#"<meta property="og:title" content="Instancias · Meshview Planet">"#)
+        );
+        assert!(instances.contains(r#"<meta property="og:description" content="Las instancias"#));
+        assert!(instances.contains(r#"<meta property="og:locale" content="es_ES">"#));
+        assert!(!map.contains(ORIGIN_MARK));
+
+        // Without a domain, each answer puts in the request's.
+        let rendered = render(&Config::default()).unwrap();
+        let page = &rendered.pages[&("map.html", "en")];
+        let request = headers(&[("host", "planet.example.net:8080")]);
+        let response = answer(page, StatusCode::OK, "en", false, &request, false);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body = String::from_utf8(body.to_vec()).unwrap();
+        assert!(body.contains(r#"content="http://planet.example.net:8080/static/og.png""#));
+        assert!(!body.contains(ORIGIN_MARK));
+    }
+
+    #[test]
+    fn the_request_s_address_is_taken_with_care() {
+        let plain = headers(&[("host", "planet.example.org")]);
+        assert_eq!(request_origin(&plain, false), "http://planet.example.org");
+        let proxied = headers(&[
+            ("host", "planet.example.org"),
+            ("x-forwarded-proto", "https"),
+        ]);
+        assert_eq!(request_origin(&proxied, true), "https://planet.example.org");
+        // Only a proxy is believed about the scheme.
+        assert_eq!(request_origin(&proxied, false), "http://planet.example.org");
+        assert_eq!(
+            request_origin(&headers(&[("host", "[::1]:8080")]), false),
+            "http://[::1]:8080"
+        );
+        // Anything that could break out of the page leaves it relative.
+        let hostile = headers(&[("host", "evil.example\"><script>")]);
+        assert_eq!(request_origin(&hostile, false), "");
+        assert_eq!(request_origin(&HeaderMap::new(), false), "");
     }
 }
