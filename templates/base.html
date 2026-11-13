@@ -237,20 +237,27 @@ document.querySelectorAll(".mesh-languages a").forEach(link => {
     link.href = url.pathname + url.search + url.hash;
 });
 
-// Header: hide while scrolling down, show again when scrolling up.
+// Header: hide while scrolling down, show again when scrolling up. How much
+// of it shows is --header-offset, for what sticks below it, as the headings of
+// a list.
 (() => {
     const header = document.querySelector(".mesh-header");
+    const root = document.documentElement;
     let lastY = window.scrollY;
+    const setHidden = hidden => {
+        header.classList.toggle("is-hidden", hidden);
+        root.style.setProperty("--header-offset", hidden ? "0px" : `${header.offsetHeight}px`);
+    };
     const update = () => {
         const y = window.scrollY;
         const busy = header.querySelector('[aria-expanded="true"]') || header.contains(document.activeElement);
         if (busy || y <= header.offsetHeight) {
-            header.classList.remove("is-hidden");
+            setHidden(false);
             lastY = y;
             return;
         }
         if (Math.abs(y - lastY) < 6) return;
-        header.classList.toggle("is-hidden", y > lastY);
+        setHidden(y > lastY);
         lastY = y;
     };
     let frame = 0;
@@ -258,7 +265,9 @@ document.querySelectorAll(".mesh-languages a").forEach(link => {
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(update);
     }, {passive: true});
-    header.addEventListener("focusin", () => header.classList.remove("is-hidden"));
+    window.addEventListener("resize", update);
+    header.addEventListener("focusin", () => setHidden(false));
+    setHidden(false);
 })();
 
 // The menu, as a panel on narrow screens.

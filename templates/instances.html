@@ -22,7 +22,17 @@
 .history-legend button[aria-pressed="false"] { opacity:.45; text-decoration:line-through; }
 .history-legend .swatch { flex:none; width:18px; height:0; border-top:3px solid currentColor; }
 .history-legend .is-total .swatch { border-top-style:dashed; }
-.planet-table-wrap { width:100%; overflow:auto; }
+/* The column headings stay at the top while the list scrolls, under the page
+   header while it shows (--header-offset, base.html), as Meshview's lists do.
+   So that they follow the page, nothing around them scrolls (clip, not auto
+   or hidden), unless the table is too wide for the screen: then it scrolls
+   sideways (.is-wide, instances.js) and the headings stay where they are. */
+.mesh-panel:has(> .planet-table-wrap) { overflow:clip; }
+.planet-table-wrap { width:100%; overflow:clip; }
+.planet-table-wrap.is-wide { overflow:auto; }
+.planet-table th { position:sticky; top:0; z-index:2; transition:top .2s ease; }
+.planet-table-wrap:not(.is-wide) > .planet-table th { top:var(--header-offset,0px); }
+@media(prefers-reduced-motion:reduce) { .planet-table th { transition:none; } }
 .planet-table { width:100%; min-width:860px; border-collapse:collapse; font-size:13px; margin:0; color:var(--mesh-text); }
 .planet-table th { height:40px; padding:0 14px; background:var(--mesh-brand); color:white; font-weight:600; font-size:12px; white-space:nowrap; text-align:left; }
 .planet-table td { height:42px; padding:6px 14px; border-bottom:1px solid var(--mesh-border); vertical-align:middle; }

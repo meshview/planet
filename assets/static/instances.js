@@ -148,6 +148,15 @@
         }
     }
 
+    // Too wide for the screen, the list scrolls sideways, and its headings
+    // no longer stick to the top of the page (see instances.html).
+    const tableWrap = document.querySelector(".planet-table-wrap");
+    const markWide = () => tableWrap.classList.toggle("is-wide", tableWrap.firstElementChild.scrollWidth > tableWrap.clientWidth + 1);
+    const wideObserver = new ResizeObserver(markWide);
+    wideObserver.observe(tableWrap);
+    wideObserver.observe(tableWrap.firstElementChild);
+    markWide();
+
     // --- The history ---
 
     // Chart.js draws it: its tooltip goes to the point nearest the pointer,
