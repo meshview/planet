@@ -68,9 +68,10 @@ enum InstanceCommand {
     Add {
         /// Its address, as https://meshview.example.org.
         url: String,
-        /// The country it is in, as an ISO 3166-1 code (ES): `areas` lists them.
-        #[arg(long)]
-        country: String,
+        /// The country it is in, as an ISO 3166-1 code (ES): `areas` lists
+        /// them. Not needed with --region, which names it already.
+        #[arg(long, required_unless_present = "region")]
+        country: Option<String>,
         /// The region, as an ISO 3166-2 code (ES-GA): `areas ES` lists them.
         #[arg(long)]
         region: Option<String>,

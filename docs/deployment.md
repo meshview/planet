@@ -138,7 +138,7 @@ site follows by itself.
 meshview-planet areas                    # every country, with its code
 meshview-planet areas spain              # its regions: by code (ES) or English name
 meshview-planet instance list
-meshview-planet instance add https://meshview.example.org --country ES --region ES-GA
+meshview-planet instance add https://meshview.example.org --region ES-GA
 meshview-planet instance add https://meshview.example.org --country ES --force
 meshview-planet instance remove https://meshview.example.org
 meshview-planet instance disable https://meshview.example.org
@@ -152,10 +152,12 @@ meshview-planet instance enable https://meshview.example.org
 - `areas` tells what to give `add`: with no country, every one with its code
   (`ES  Spain`); with one, by code or part of its English name, its regions
   (`ES-GA  Galicia`). A name that fits several countries lists them.
-- `add` checks as the form does: the area has to be on the list, and the
-  instance has to answer as a Meshview. With `--force` it is added even if it
-  does not answer now, and the rounds read it from then on. If it never
-  answers, the cleanup takes it offline and in time deletes it, as any other.
+- `add` takes a country (`--country ES`), a region (`--region ES-GA`, which
+  names its country already), or both, if they agree. It checks as the form
+  does: the area has to be on the list, and the instance has to answer as a
+  Meshview. With `--force` it is added even if it does not answer now, and
+  the rounds read it from then on. If it never answers, the cleanup takes it
+  offline and in time deletes it, as any other.
 - `remove` deletes an instance with its nodes and its history. Anyone may add
   it again from the site.
 - `disable` keeps an instance in the database but takes it off the site: it is

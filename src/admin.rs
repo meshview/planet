@@ -36,22 +36,21 @@ pub enum Added {
 }
 
 /// Adds an instance, as the web does: a normalised URL, an area from the list,
-/// and an answer like a Meshview's. With `force`, one that does not answer is
+/// and an answer like a Meshview's. The area is a country, a region, or both
+/// (see [`area`]). With `force`, one that does not answer is
 /// added too, to be read by the rounds; the cleanup treats it as any other,
 /// so if it never answers it goes offline and is in time deleted.
 pub async fn add(
     pool: &SqlitePool,
     collector: &Collector,
     url: &str,
-    country: &str,
+    country: Option<&str>,
     region: Option<&str>,
     force: bool,
     now: i64,
 ) -> Result<(String, Added)> {
     let url = check_url(url, collector.settings().allow_private_addresses)?;
-    let (country, region) = Areas::get()
-        .check(country, region)
-        .map_err(|e| anyhow::anyhow!("{e} (meshview-planet areas lists them)"))?;
+    let (country, region) = area(country, region)?;
     if let Some(listed) = db::instance_by_url(pool, &url).await? {
         match listed.disabled_at {
             Some(_) => bail!("{url} is there, disabled: enable it instead"),
@@ -82,6 +81,28 @@ pub async fn add(
         }
     };
     Ok((url, added))
+}
+
+/// An area from the list, checked and in its canonical form. A region names
+/// its country already (ES-GA is in ES), so the country can be left out when
+/// a region is given; given both, they have to agree.
+pub fn area(country: Option<&str>, region: Option<&str>) -> Result<(String, Option<String>)> {
+    let (country, region) = (given(country), given(region));
+    let country = match (country, region) {
+        (Some(country), _) => country,
+        (None, Some(region)) => region.split('-').next().unwrap_or(region),
+        (None, None) => {
+            bail!("give a country, a region, or both (meshview-planet areas lists them)")
+        }
+    };
+    Areas::get()
+        .check(country, region)
+        .map_err(|e| anyhow::anyhow!("{e} (meshview-planet areas lists them)"))
+}
+
+/// A value given and not blank, trimmed.
+fn given(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
 }
 
 /// The instance at a URL, written as it was added or not.

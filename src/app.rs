@@ -145,7 +145,7 @@ pub enum InstanceAction {
     List,
     Add {
         url: String,
-        country: String,
+        country: Option<String>,
         region: Option<String>,
         force: bool,
     },
@@ -182,7 +182,7 @@ async fn instance_action(
                 pool,
                 &collector()?,
                 &url,
-                &country,
+                country.as_deref(),
                 region.as_deref(),
                 force,
                 now,

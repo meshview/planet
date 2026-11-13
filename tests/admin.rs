@@ -22,7 +22,8 @@ async fn an_instance_that_answers_is_added_with_its_nodes() {
         &pool,
         &collector,
         &format!("{}/", instance.url),
-        "es",
+        // The region names the country.
+        None,
         Some("es-ga"),
         false,
         NOW,
@@ -42,7 +43,7 @@ async fn an_instance_that_answers_is_added_with_its_nodes() {
     assert_eq!(db::count_nodes(&pool, stored.id).await.unwrap(), 10);
     assert_eq!(admin::state(&stored), State::Online);
 
-    let twice = admin::add(&pool, &collector, &url, "ES", None, false, NOW).await;
+    let twice = admin::add(&pool, &collector, &url, Some("ES"), None, false, NOW).await;
     assert!(twice.unwrap_err().to_string().contains("already listed"));
 }
 
@@ -50,20 +51,45 @@ async fn an_instance_that_answers_is_added_with_its_nodes() {
 async fn one_that_does_not_answer_needs_force() {
     let (_dir, pool, collector) = planet(settings()).await;
     let instance = Instance::start(Kind::Broken, 3).await;
-    let refused = admin::add(&pool, &collector, &instance.url, "ES", None, false, NOW)
-        .await
-        .unwrap_err()
-        .to_string();
+    let refused = admin::add(
+        &pool,
+        &collector,
+        &instance.url,
+        Some("ES"),
+        None,
+        false,
+        NOW,
+    )
+    .await
+    .unwrap_err()
+    .to_string();
     assert!(refused.contains("--force"), "{refused}");
     assert!(db::instances(&pool).await.unwrap().is_empty());
 
     // Nor is the area ever free text, forced or not.
-    let bad_area = admin::add(&pool, &collector, &instance.url, "XX", None, true, NOW).await;
+    let bad_area = admin::add(
+        &pool,
+        &collector,
+        &instance.url,
+        Some("XX"),
+        None,
+        true,
+        NOW,
+    )
+    .await;
     assert!(bad_area.is_err());
 
-    let (url, added) = admin::add(&pool, &collector, &instance.url, "ES", None, true, NOW)
-        .await
-        .unwrap();
+    let (url, added) = admin::add(
+        &pool,
+        &collector,
+        &instance.url,
+        Some("ES"),
+        None,
+        true,
+        NOW,
+    )
+    .await
+    .unwrap();
     assert_eq!(
         added,
         Added::NotAnswering("/version: answered HTTP 500".into())
@@ -83,9 +109,17 @@ async fn one_that_does_not_answer_needs_force() {
 async fn removing_deletes_everything() {
     let (_dir, pool, collector) = planet(settings()).await;
     let instance = Instance::start(Kind::Rust, 4).await;
-    admin::add(&pool, &collector, &instance.url, "ES", None, false, NOW)
-        .await
-        .unwrap();
+    admin::add(
+        &pool,
+        &collector,
+        &instance.url,
+        Some("ES"),
+        None,
+        false,
+        NOW,
+    )
+    .await
+    .unwrap();
     // Written as it was added or not: the slash does not matter.
     let url = admin::remove(&pool, &format!("{}/", instance.url))
         .await
@@ -100,9 +134,17 @@ async fn removing_deletes_everything() {
 async fn disabling_keeps_it_and_enabling_reads_it_again() {
     let (_dir, pool, collector) = planet(settings()).await;
     let instance = Instance::start(Kind::Rust, 4).await;
-    let (url, _) = admin::add(&pool, &collector, &instance.url, "ES", None, false, NOW)
-        .await
-        .unwrap();
+    let (url, _) = admin::add(
+        &pool,
+        &collector,
+        &instance.url,
+        Some("ES"),
+        None,
+        false,
+        NOW,
+    )
+    .await
+    .unwrap();
 
     // Offline when disabled.
     instance.set(Kind::Broken);
@@ -115,7 +157,7 @@ async fn disabling_keeps_it_and_enabling_reads_it_again() {
     assert!(db::enabled_instances(&pool).await.unwrap().is_empty());
     // Disabled, it is not even counted for when the last round was.
     assert_eq!(db::last_round(&pool).await.unwrap(), None);
-    let twice = admin::add(&pool, &collector, &url, "ES", None, true, NOW).await;
+    let twice = admin::add(&pool, &collector, &url, Some("ES"), None, true, NOW).await;
     assert!(twice.unwrap_err().to_string().contains("enable it"));
 
     // Long after, enabled again while it still fails: back in, and not
@@ -249,4 +291,26 @@ fn the_list_is_grouped_by_state() {
         admin::instance_list(Vec::new(), NOW, &settings(), Style::plain())
             .contains("No instances yet")
     );
+}
+
+#[test]
+fn a_region_names_its_country() {
+    assert_eq!(
+        admin::area(None, Some("es-ga")).unwrap(),
+        ("ES".to_string(), Some("ES-GA".to_string()))
+    );
+    assert_eq!(
+        admin::area(Some("ES"), Some("ES-GA")).unwrap(),
+        ("ES".to_string(), Some("ES-GA".to_string()))
+    );
+    assert_eq!(
+        admin::area(Some("es"), None).unwrap(),
+        ("ES".to_string(), None)
+    );
+    // Both, not agreeing; a region that is not; nothing at all.
+    assert!(admin::area(Some("PT"), Some("ES-GA")).is_err());
+    assert!(admin::area(None, Some("ES-XX")).is_err());
+    assert!(admin::area(None, Some("galicia")).is_err());
+    assert!(admin::area(None, None).is_err());
+    assert!(admin::area(Some(" "), Some("")).is_err());
 }
