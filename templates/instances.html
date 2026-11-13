@@ -68,14 +68,14 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
 .status-tag.is-offline { color:var(--mesh-bad); }
 .status-tag.is-offline::before { background:#dc3545; }
 .status-reason { display:block; margin-top:3px; max-width:280px; color:var(--mesh-muted); font-size:11px; overflow-wrap:anywhere; }
-.planet-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:start; }
+.planet-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
 @media(max-width:1000px) { .planet-columns { grid-template-columns:minmax(0,1fr); } }
 .planet-form { display:grid; gap:12px; }
 .planet-form label { display:block; margin-bottom:4px; font-size:12px; font-weight:600; color:var(--mesh-muted); }
 .planet-form .mesh-input,.planet-form .mesh-select { width:100%; }
 .planet-form-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
 @media(max-width:560px) { .planet-form-row { grid-template-columns:minmax(0,1fr); } }
-.planet-form-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.planet-form-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:12px; }
 .planet-form-hint { margin:0; color:var(--mesh-muted); font-size:12px; line-height:1.5; }
 #submit-status { margin:0; font-size:13px; line-height:1.5; }
 #submit-status:empty { display:none; }
