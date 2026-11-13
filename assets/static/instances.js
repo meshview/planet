@@ -164,6 +164,12 @@
         return days;
     }
 
+    const dayFormat = new Intl.DateTimeFormat(language, {dateStyle: "medium", timeZone: "UTC"});
+    const formatDay = date => dayFormat.format(new Date(`${date}T00:00:00Z`));
+
+    // The colour of the text, which theme.js turns light at night.
+    const TOTAL_COLOR = "#243247";
+
     async function loadHistory() {
         const days = document.getElementById("history-days").value;
         chart.showLoading({text: MeshI18n.t("Loading…"), color: "#245ea8", textColor: "#566579", maskColor: "rgba(0,0,0,0)"});
@@ -177,18 +183,23 @@
                 return {
                     name: areaOf(instance) + " · " + hostOf(instance.url),
                     type: "line",
-                    // A few days of history are points rather than lines.
-                    showSymbol: dates.length <= 45,
-                    symbolSize: 5,
+                    // Every day a point, to be pointed at: small when there are
+                    // many, and solid, as hollow ones are white at night.
+                    symbol: "circle",
+                    symbolSize: dates.length <= 45 ? 5 : 3,
                     connectNulls: false,
                     emphasis: {focus: "series"},
                     data: dates.map(date => counts.has(date) ? counts.get(date) : null),
                 };
             });
+            // The sum, on a scale of its own: dashed, in the colour of the
+            // axis on the right that measures it.
             const total = MeshI18n.t("All instances");
             series.unshift({
-                name: total, type: "line", showSymbol: dates.length <= 45, symbolSize: 6, yAxisIndex: 1,
-                lineStyle: {width: 3, type: "dashed", color: "#243247"}, itemStyle: {color: "#243247"},
+                name: total, type: "line", yAxisIndex: 1, z: 1,
+                symbol: "circle", symbolSize: dates.length <= 45 ? 6 : 4,
+                lineStyle: {width: 3, type: "dashed", color: TOTAL_COLOR}, itemStyle: {color: TOTAL_COLOR},
+                emphasis: {focus: "series"},
                 data: dates.map(date => totals.get(date)),
             });
             chart.hideLoading();
@@ -197,19 +208,22 @@
                 // Room above for the names of the axes, each written outwards from its
                 // axis so that neither runs off the side.
                 grid: {left: 56, right: 64, top: 54, bottom: 94},
+                // One point at a time: with every instance in it, a day's
+                // tooltip ran far below the chart.
                 tooltip: {
-                    trigger: "axis",
-                    order: "valueDesc",
+                    trigger: "item",
                     confine: true,
-                    valueFormatter: value => value == null ? "—" : formatNumber(value),
+                    formatter: point => point.value == null ? "" :
+                        `${point.marker}${escapeHtml(point.seriesName)}<br>`
+                        + `${escapeHtml(formatDay(point.name))}: <b>${escapeHtml(formatNumber(point.value))}</b>`,
                 },
                 // Room at the sides by padding: with `left` set, ECharts takes no
                 // notice of `right`, and the pager would touch the edge.
                 legend: {type: "scroll", left: 0, padding: [5, 17], bottom: 8, textStyle: {color: "#566579"}},
                 xAxis: {type: "category", data: dates, boundaryGap: false, axisLabel: {color: "#566579"}},
                 yAxis: [
-                    {type: "value", name: MeshI18n.t("Per instance"), axisLabel: {color: "#566579"}, nameGap: 22, nameTextStyle: {color: "#566579", align: "left", padding: [0, 0, 0, -40]}},
-                    {type: "value", name: total, splitLine: {show: false}, axisLabel: {color: "#566579"}, nameGap: 22, nameTextStyle: {color: "#566579", align: "right", padding: [0, -48, 0, 0]}},
+                    {type: "value", name: MeshI18n.t("Per instance"), splitLine: {lineStyle: {color: "#dce4ef"}}, axisLabel: {color: "#566579"}, nameGap: 22, nameTextStyle: {color: "#566579", align: "left", padding: [0, 0, 0, -40]}},
+                    {type: "value", name: total, splitLine: {show: false}, axisLabel: {color: TOTAL_COLOR}, nameGap: 22, nameTextStyle: {color: TOTAL_COLOR, fontWeight: "bold", align: "right", padding: [0, -48, 0, 0]}},
                 ],
                 series,
             }, true);
