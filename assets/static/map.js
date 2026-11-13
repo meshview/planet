@@ -104,7 +104,7 @@
             const icon = L.DomUtil.create("span", "ti", button);
             icon.setAttribute("aria-hidden", "true");
             L.DomEvent.disableClickPropagation(bar);
-            L.DomEvent.on(button, "click", () => setFull(!document.body.classList.contains("is-map-full")));
+            L.DomEvent.on(button, "click", () => setFull(!document.body.classList.contains("is-map-full"), {remember: true}));
             this.update = full => {
                 const label = full ? MeshI18n.t("Leave full screen") : MeshI18n.t("Full screen map");
                 button.title = label;
@@ -118,7 +118,13 @@
     });
     const fullScreen = new FullScreen().addTo(map);
     const header = document.querySelector(".mesh-header");
-    function setFull(full) {
+    // Whether the visitor left the map full screen, for their next visit. Only
+    // what they chose themselves: opening a link with ?full=1 changes nothing.
+    const FULL_KEY = "meshview-planet-map-full";
+    function setFull(full, {remember = false} = {}) {
+        if (remember) {
+            try { localStorage.setItem(FULL_KEY, full ? "1" : "0"); } catch {}
+        }
         document.body.classList.toggle("is-map-full", full);
         document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
         header.classList.remove("is-hidden");
@@ -127,7 +133,7 @@
         saveState();
     }
     document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && document.body.classList.contains("is-map-full")) setFull(false);
+        if (event.key === "Escape" && document.body.classList.contains("is-map-full")) setFull(false, {remember: true});
     });
     window.addEventListener("resize", () => {
         document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
@@ -345,7 +351,15 @@
     }
 
     fillDays();
-    if (params.get("full") === "1") setFull(true);
+    // The address says, if it does (?full=1 or ?full=0); else what the visitor
+    // chose last time.
+    let startFull = false;
+    if (params.has("full")) {
+        startFull = params.get("full") === "1";
+    } else {
+        try { startFull = localStorage.getItem(FULL_KEY) === "1"; } catch {}
+    }
+    if (startFull) setFull(true);
     daysSelect.addEventListener("change", () => load());
     countrySelect.addEventListener("change", () => {
         fillInstances();
