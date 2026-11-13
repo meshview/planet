@@ -194,18 +194,22 @@
             chart.hideLoading();
             chart.setOption({
                 animation: false,
-                grid: {left: 56, right: 64, top: 24, bottom: 86},
+                // Room above for the names of the axes, each written outwards from its
+                // axis so that neither runs off the side.
+                grid: {left: 56, right: 64, top: 54, bottom: 94},
                 tooltip: {
                     trigger: "axis",
                     order: "valueDesc",
                     confine: true,
                     valueFormatter: value => value == null ? "—" : formatNumber(value),
                 },
-                legend: {type: "scroll", bottom: 0, textStyle: {color: "#566579"}},
+                // Room at the sides by padding: with `left` set, ECharts takes no
+                // notice of `right`, and the pager would touch the edge.
+                legend: {type: "scroll", left: 0, padding: [5, 17], bottom: 8, textStyle: {color: "#566579"}},
                 xAxis: {type: "category", data: dates, boundaryGap: false, axisLabel: {color: "#566579"}},
                 yAxis: [
-                    {type: "value", name: MeshI18n.t("Per instance"), axisLabel: {color: "#566579"}, nameTextStyle: {color: "#566579"}},
-                    {type: "value", name: total, splitLine: {show: false}, axisLabel: {color: "#566579"}, nameTextStyle: {color: "#566579"}},
+                    {type: "value", name: MeshI18n.t("Per instance"), axisLabel: {color: "#566579"}, nameGap: 22, nameTextStyle: {color: "#566579", align: "left", padding: [0, 0, 0, -40]}},
+                    {type: "value", name: total, splitLine: {show: false}, axisLabel: {color: "#566579"}, nameGap: 22, nameTextStyle: {color: "#566579", align: "right", padding: [0, -48, 0, 0]}},
                 ],
                 series,
             }, true);
