@@ -1,0 +1,42 @@
+# Meshview Planet's configuration, with every key at its default. Any of them
+# can also be set from the environment as MESHVIEW_PLANET_<SECTION>__<KEY>, as
+# in MESHVIEW_PLANET_SERVER__PORT=8080.
+
+[server]
+# The address to listen on; "*" is every interface.
+bind = "*"
+port = 8080
+# Take the client's address from X-Forwarded-For, for the submission rate
+# limit. Only behind a reverse proxy that sets it.
+behind_proxy = false
+
+[database]
+# The SQLite file, created with its schema if it is not there.
+path = "planet.db"
+
+[collector]
+# Minutes between collections.
+interval_minutes = 240
+# The nodes asked of each instance: those seen in this many days.
+days_active = 14
+# How many instances are read at the same time.
+concurrency = 8
+# Seconds an instance gets to answer each request.
+timeout_seconds = 60
+# The largest answer read from an instance, in megabytes.
+max_response_mb = 64
+# Days without a good collection after which an instance is offline: last in
+# the list, and its nodes off the map until it answers again.
+offline_after_days = 3
+# Days offline after which an instance is deleted, nodes and history included.
+delete_after_days = 30
+# Whether instances on private, loopback or link-local addresses may be read.
+# Only for testing: on a public server it lets anyone make it reach into the
+# network it runs in.
+allow_private_addresses = false
+
+[submissions]
+# Whether the web accepts new instances.
+enabled = true
+# Submissions one address may make in an hour, accepted or not.
+per_ip_per_hour = 5
