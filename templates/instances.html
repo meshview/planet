@@ -97,6 +97,8 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
     .planet-table td[data-label] { text-align:left; font-size:12px; }
     .planet-table td[data-label]::before { content:attr(data-label) " "; color:var(--mesh-muted); }
 }
+.planet-list-note { margin:0; padding:12px 18px; border-top:1px solid var(--mesh-border); color:var(--mesh-muted); font-size:13px; }
+.planet-list-note .ti { margin-right:2px; }
 .planet-howto ul { padding-left:20px; margin:0 0 12px; }
 .planet-howto li { margin-bottom:6px; }
 </style>
@@ -164,6 +166,7 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
             </tbody>
         </table>
     </div>
+    <p class="planet-list-note"><span class="ti ti-info-circle" aria-hidden="true"></span> {{ "Is something wrong on the list, or do you want your instance taken off it?" | tr }} <a href="https://github.com/meshview/planet/issues/new" target="_blank" rel="noopener">{{ "Open an issue on GitHub." | tr }}</a></p>
 </section>
 
 <div class="planet-columns">
