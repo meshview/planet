@@ -7,12 +7,16 @@ instances, writing one SQLite file. There is nothing else to run beside it.
 
 | Command | |
 |---|---|
-| `meshview-planet` or `meshview-planet run` | Serve the web and collect, until stopped. |
+| `meshview-planet run` | Serve the web and collect, until stopped. |
 | `meshview-planet import <url>` | Add the instances another site lists at `<url>`, its `/api/instances`, and exit. |
 | `meshview-planet collect` | One collection round now, with its cleanup, and exit. |
 | `meshview-planet migrate` | Create the database or bring its schema up to date, and exit. `run` does this by itself. |
 | `meshview-planet areas [country]` | List the countries to choose from or, given one, its regions, and exit. |
 | `meshview-planet instance …` | List, add, remove, disable or enable instances, and exit; see [Managing instances](#managing-instances). |
+
+There is no default command: `meshview-planet` alone only shows the help, so
+that nobody starts a server by accident. The container image runs `run`
+unless told otherwise.
 
 `--config <file>` (or `MESHVIEW_PLANET_CONFIG`) names the configuration; see
 [Configuration](configuration.md).
@@ -20,7 +24,7 @@ instances, writing one SQLite file. There is nothing else to run beside it.
 ## First start
 
 ```sh
-meshview-planet   # serve and collect
+meshview-planet run   # serve and collect
 ```
 
 The site starts empty, and fills as instances are added from its instances
@@ -55,7 +59,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/meshview-planet
+ExecStart=/usr/local/bin/meshview-planet run
 WorkingDirectory=/var/lib/meshview-planet
 DynamicUser=yes
 StateDirectory=meshview-planet

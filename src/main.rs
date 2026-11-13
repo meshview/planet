@@ -12,7 +12,7 @@ use tracing_subscriber::EnvFilter;
 
 /// A world map of the nodes every Meshview instance sees.
 #[derive(Debug, Parser)]
-#[command(version, about)]
+#[command(version, about, arg_required_else_help = true)]
 struct Cli {
     /// The configuration file. Named here or in MESHVIEW_PLANET_CONFIG it has to
     /// exist; otherwise ./config.toml or /etc/meshview-planet/config.toml is
@@ -20,13 +20,15 @@ struct Cli {
     #[arg(long, short, env = "MESHVIEW_PLANET_CONFIG", global = true)]
     config: Option<PathBuf>,
 
+    /// What to do: there is no default, so that a bare `meshview-planet` only
+    /// shows this help rather than start a server.
     #[command(subcommand)]
-    command: Option<Command>,
+    command: Command,
 }
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Serve the web and collect from the instances (the default).
+    /// Serve the web and collect from the instances, until stopped.
     Run,
     /// Collect from every instance once, and exit.
     Collect,
@@ -114,7 +116,7 @@ async fn main() -> Result<()> {
         );
     }
 
-    match cli.command.unwrap_or(Command::Run) {
+    match cli.command {
         Command::Run => app::run(config).await,
         Command::Collect => app::collect(config).await,
         Command::Import { source } => app::import(config, &source).await,

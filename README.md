@@ -50,7 +50,7 @@ From a release's static binary, or a build:
 
 ```sh
 cargo build --release
-./target/release/meshview-planet   # serve on :8080 and collect
+./target/release/meshview-planet run   # serve on :8080 and collect
 ```
 
 Or the container image:
