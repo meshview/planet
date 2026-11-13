@@ -174,6 +174,20 @@ impl Resolve for PublicOnly {
     }
 }
 
+/// TLS through rustls with `ring`, trusting the roots compiled in: no
+/// ca-certificates is needed where it runs.
+pub fn tls() -> Result<rustls::ClientConfig> {
+    let mut roots = rustls::RootCertStore::empty();
+    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    Ok(rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .context("setting up TLS")?
+    .with_root_certificates(roots)
+    .with_no_client_auth())
+}
+
 /// The client the instances are read with.
 #[derive(Clone)]
 pub struct Client {
@@ -199,21 +213,11 @@ impl Client {
             }
         });
 
-        let mut roots = rustls::RootCertStore::empty();
-        roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-        let tls = rustls::ClientConfig::builder_with_provider(Arc::new(
-            rustls::crypto::ring::default_provider(),
-        ))
-        .with_safe_default_protocol_versions()
-        .context("setting up TLS")?
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-
         let mut builder = reqwest::Client::builder()
             .user_agent(USER_AGENT)
             .timeout(settings.timeout())
             .redirect(policy)
-            .tls_backend_preconfigured(tls)
+            .tls_backend_preconfigured(tls()?)
             .no_proxy();
         if !allow_private {
             builder = builder.dns_resolver(Arc::new(PublicOnly));

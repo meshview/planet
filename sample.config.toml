@@ -40,3 +40,22 @@ allow_private_addresses = false
 enabled = true
 # Submissions one address may make in an hour, accepted or not.
 per_ip_per_hour = 5
+
+[notifications]
+# What to tell the administrator: any of "instance_added" (from the site),
+# "instance_offline", "instance_online" (back after being offline) and
+# "instance_deleted".
+events = ["instance_added"]
+# Each channel is on when its address is set; any number at once.
+# A URL to POST each event to, as JSON.
+webhook_url = ""
+# An ntfy topic, as "https://ntfy.sh/my-topic", and a token if it asks for one.
+ntfy_url = ""
+ntfy_token = ""
+# A Discord channel's webhook, and a Slack incoming webhook.
+discord_url = ""
+slack_url = ""
+# A Matrix room: the homeserver, the room's id, and the writer's access token.
+matrix_homeserver = ""
+matrix_room = ""
+matrix_token = ""

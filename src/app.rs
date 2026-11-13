@@ -5,6 +5,7 @@
 
 use crate::collector::{Collector, unix_now};
 use crate::config::Config;
+use crate::notify::Notifier;
 use crate::web::{self, AppState};
 use crate::{db, import};
 use anyhow::{Context, Result};
@@ -28,7 +29,9 @@ pub async fn run(config: Config) -> Result<()> {
 pub async fn run_until(config: Config, stopping: watch::Receiver<bool>) -> Result<()> {
     let pool = db::open(&config.database.path).await?;
     info!("database {}", config.database.path.display());
-    let collector = Collector::new(pool.clone(), config.collector.clone())?;
+    let notifier = notifier(&config)?;
+    let collector =
+        Collector::new(pool.clone(), config.collector.clone())?.with_notifier(notifier.clone());
 
     let addr = config.listen_addr()?;
     let listener = TcpListener::bind(addr)
@@ -58,16 +61,36 @@ pub async fn run_until(config: Config, stopping: watch::Receiver<bool>) -> Resul
         Ok(Err(e)) => warn!("the web server task failed: {e}"),
         Err(_) => warn!("still serving requests after {DRAIN_GRACE:?}; stopping anyway"),
     }
+    notifier.flush().await;
     db::close(pool).await;
     info!("stopped");
     Ok(())
 }
 
+/// The notifier the configuration asks for, said in the log.
+fn notifier(config: &Config) -> Result<Notifier> {
+    let notifier = Notifier::new(&config.notifications)?;
+    let channels: Vec<&str> = notifier.channels().iter().map(|c| c.name()).collect();
+    if !channels.is_empty() {
+        let events: Vec<&str> = config
+            .notifications
+            .events
+            .iter()
+            .map(|event| event.as_str())
+            .collect();
+        info!("notifying {} of {}", channels.join(", "), events.join(", "));
+    }
+    Ok(notifier)
+}
+
 /// One collection round, and exit.
 pub async fn collect(config: Config) -> Result<()> {
     let pool = db::open(&config.database.path).await?;
-    let collector = Collector::new(pool.clone(), config.collector)?;
+    let notifier = notifier(&config)?;
+    let collector =
+        Collector::new(pool.clone(), config.collector.clone())?.with_notifier(notifier.clone());
     let result = collector.round(unix_now()).await;
+    notifier.flush().await;
     db::close(pool).await;
     result.map(|_| ())
 }

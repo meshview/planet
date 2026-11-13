@@ -224,14 +224,22 @@ pub async fn record_failure(pool: &SqlitePool, instance: i64, now: i64, error: &
     Ok(())
 }
 
+/// An instance the cleanup changed, with what a notice about it says.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct Changed {
+    pub url: String,
+    pub country: String,
+    pub region: Option<String>,
+    pub last_error: Option<String>,
+}
+
 /// Marks offline the instances that have not had a good collection since
 /// `before` (counting from when they were added, for one that never had one).
-/// Answers their URLs.
-pub async fn mark_offline(pool: &SqlitePool, before: i64, now: i64) -> Result<Vec<String>> {
-    Ok(sqlx::query_scalar(
+pub async fn mark_offline(pool: &SqlitePool, before: i64, now: i64) -> Result<Vec<Changed>> {
+    Ok(sqlx::query_as(
         "UPDATE instance SET offline_since = ?
          WHERE offline_since IS NULL AND COALESCE(last_success_at, added_at) < ?
-         RETURNING url",
+         RETURNING url, country, region, last_error",
     )
     .bind(now)
     .bind(before)
@@ -240,11 +248,11 @@ pub async fn mark_offline(pool: &SqlitePool, before: i64, now: i64) -> Result<Ve
 }
 
 /// Deletes the instances offline since before `before`, with their nodes and
-/// their history. Answers their URLs.
-pub async fn delete_offline(pool: &SqlitePool, before: i64) -> Result<Vec<String>> {
-    Ok(sqlx::query_scalar(
+/// their history.
+pub async fn delete_offline(pool: &SqlitePool, before: i64) -> Result<Vec<Changed>> {
+    Ok(sqlx::query_as(
         "DELETE FROM instance WHERE offline_since IS NOT NULL AND offline_since < ?
-         RETURNING url",
+         RETURNING url, country, region, last_error",
     )
     .bind(before)
     .fetch_all(pool)

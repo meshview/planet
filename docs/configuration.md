@@ -90,3 +90,31 @@ a path. The log says which variables were used, by name, at start.
 |---|---|---|
 | `enabled` | `true` | Whether the site accepts new instances. Off, the form is replaced by a note and the API answers 403. |
 | `per_ip_per_hour` | `5` | Submissions one address may make in an hour, accepted or not. IPv6 addresses count by their /64. |
+
+### `[notifications]`
+
+Telling the administrator what happens to the list. Each channel is on when
+its address is set, and any number of them can be on at once; all get the same
+events. Notices are sent in the background: a channel that is down never holds
+up a submission or a collection, and its error is only logged. Unlike the
+instances, the channels may be on a private network.
+
+| Key | Default | |
+|---|---|---|
+| `events` | `["instance_added"]` | What to tell: any of `instance_added` (from the site, with the address it came from), `instance_offline`, `instance_online` (answering again after being offline) and `instance_deleted`. |
+| `webhook_url` | `""` | A URL to POST each event to, as JSON: `event`, `title`, `message`, `at`, `days`, `from_ip`, and `instance` with its `url`, `country`, `region`, `area` (`en`, `es`), `version`, `node_count` and `last_error`. |
+| `ntfy_url` | `""` | An [ntfy](https://ntfy.sh) topic, as `https://ntfy.sh/my-topic` or on a server of your own. The notice opens the instance when tapped. |
+| `ntfy_token` | `""` | An ntfy access token, for a server or topic that asks for one. |
+| `discord_url` | `""` | A Discord channel's webhook URL. |
+| `slack_url` | `""` | A Slack incoming webhook URL. |
+| `matrix_homeserver` | `""` | A Matrix homeserver, as `https://matrix.org`. Matrix needs this and the two below, all three. |
+| `matrix_room` | `""` | The id of the room to write to, as `!abc123:matrix.org`, which the account has joined. |
+| `matrix_token` | `""` | The access token of the account that writes. |
+
+A notice, as ntfy shows it:
+
+```text
+New instance: Galicia, Spain
+https://meshview.example.org
+Meshview 5.0.0, 812 nodes. Added from the site, from 203.0.113.7.
+```

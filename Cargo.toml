@@ -26,7 +26,7 @@ jiff = "0.2"
 # The client that polls the instances. TLS through rustls with `ring` and the
 # compiled in roots, as Meshview does for MQTT: no aws-lc to cross compile, and
 # no ca-certificates needed in the image.
-reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "http2", "gzip", "stream"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "http2", "gzip", "json", "stream"] }
 # The pages and their files, built into the binary.
 rust-embed = { version = "8", features = ["mime-guess"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }

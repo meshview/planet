@@ -117,6 +117,15 @@ location / {
 }
 ```
 
+## Notifications
+
+The administrator can be told when an instance is added from the site, and,
+if they want, when one goes offline, comes back or is deleted: by a webhook
+with JSON, ntfy, Discord, Slack or a Matrix room, any number at once. See
+[`[notifications]`](configuration.md#notifications). The log says at start
+which channels are on and for what. Notices still on their way when the
+process stops get a few seconds to go.
+
 ## Probes and stopping
 
 `/livez` answers 200 for as long as the process can answer. The database is
@@ -130,11 +139,13 @@ is closed cleanly, which leaves the one file and nothing beside it.
 
 ## What it reaches
 
-The server reaches out to the instances only, over HTTP and HTTPS. It never
+The server reaches out to the instances, over HTTP and HTTPS, and to the
+notification channels configured, if any. To read an instance it never
 connects to a private, loopback, link-local or otherwise not public address
 (unless `allow_private_addresses` is set), checking the addresses a name
 resolves to at the moment it connects and every redirect, so a submitted URL
-cannot make it reach into the network it runs in.
+cannot make it reach into the network it runs in. The notification channels
+are the administrator's own, and may be on a private network.
 
 The pages load their scripts, styles and fonts from the server itself. The map
 tiles come from OpenStreetMap, and the API reference page loads Scalar from

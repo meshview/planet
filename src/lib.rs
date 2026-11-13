@@ -14,5 +14,6 @@ pub mod db;
 pub mod import;
 pub mod meshview;
 pub mod net;
+pub mod notify;
 pub mod submit;
 pub mod web;

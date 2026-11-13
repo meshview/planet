@@ -15,6 +15,7 @@ use crate::config::Collector as Settings;
 use crate::db::{self, Instance};
 use crate::meshview;
 use crate::net::Client;
+use crate::notify::{Notice, Notifier};
 use anyhow::Result;
 use futures_util::StreamExt;
 use futures_util::stream;
@@ -45,6 +46,7 @@ pub struct Collector {
     pool: SqlitePool,
     client: Client,
     settings: Settings,
+    notifier: Notifier,
 }
 
 impl Collector {
@@ -53,7 +55,18 @@ impl Collector {
             client: Client::new(&settings)?,
             pool,
             settings,
+            notifier: Notifier::default(),
         })
+    }
+
+    /// The same collector, telling `notifier` what happens to the list.
+    pub fn with_notifier(mut self, notifier: Notifier) -> Self {
+        self.notifier = notifier;
+        self
+    }
+
+    pub fn notifier(&self) -> &Notifier {
+        &self.notifier
     }
 
     pub fn client(&self) -> &Client {
@@ -94,6 +107,14 @@ impl Collector {
             Ok(snapshot) => {
                 if instance.offline_since.is_some() {
                     info!("{} answers again", instance.url);
+                    self.notifier.send(Notice::online(
+                        &instance.url,
+                        &instance.country,
+                        instance.region.as_deref(),
+                        &snapshot.version.version,
+                        snapshot.nodes.len(),
+                        now,
+                    ));
                 }
                 db::record_success(
                     &self.pool,
@@ -121,21 +142,36 @@ impl Collector {
     pub async fn cleanup(&self, now: i64) -> Result<Cleanup> {
         let offline_before = now - i64::from(self.settings.offline_after_days) * DAY;
         let delete_before = now - i64::from(self.settings.delete_after_days) * DAY;
+        let days = self.settings.offline_after_days;
         let offline = db::mark_offline(&self.pool, offline_before, now).await?;
-        for url in &offline {
-            info!(
-                "{url} has not answered in {} days: offline",
-                self.settings.offline_after_days
-            );
+        for gone in &offline {
+            info!("{} has not answered in {days} days: offline", gone.url);
+            self.notifier.send(Notice::offline(
+                &gone.url,
+                &gone.country,
+                gone.region.as_deref(),
+                gone.last_error.as_deref(),
+                days,
+                now,
+            ));
         }
+        let days = self.settings.delete_after_days;
         let deleted = db::delete_offline(&self.pool, delete_before).await?;
-        for url in &deleted {
-            info!(
-                "{url} has been offline for {} days: deleted",
-                self.settings.delete_after_days
-            );
+        for gone in &deleted {
+            info!("{} has been offline for {days} days: deleted", gone.url);
+            self.notifier.send(Notice::deleted(
+                &gone.url,
+                &gone.country,
+                gone.region.as_deref(),
+                gone.last_error.as_deref(),
+                days,
+                now,
+            ));
         }
-        Ok(Cleanup { offline, deleted })
+        Ok(Cleanup {
+            offline: offline.into_iter().map(|gone| gone.url).collect(),
+            deleted: deleted.into_iter().map(|gone| gone.url).collect(),
+        })
     }
 
     /// One round: collect, then clean up.

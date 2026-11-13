@@ -37,6 +37,7 @@ pub struct Config {
     pub database: Database,
     pub collector: Collector,
     pub submissions: Submissions,
+    pub notifications: Notifications,
     /// The file this came from, if any.
     #[serde(skip)]
     source: Option<PathBuf>,
@@ -146,6 +147,74 @@ impl Default for Submissions {
     }
 }
 
+/// `[notifications]`: telling the administrator what happens to the list.
+///
+/// Each channel is on when its address is set, and any number can be on at
+/// once. All of them get the same events, those in `events`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Notifications {
+    /// What to tell.
+    pub events: Vec<Event>,
+    /// A URL to POST each event to, as JSON.
+    pub webhook_url: String,
+    /// An ntfy topic's URL, as `https://ntfy.sh/my-topic`.
+    pub ntfy_url: String,
+    /// An ntfy access token, for a server that asks for one.
+    pub ntfy_token: String,
+    /// A Discord channel's webhook URL.
+    pub discord_url: String,
+    /// A Slack incoming webhook URL.
+    pub slack_url: String,
+    /// A Matrix homeserver, as `https://matrix.org`.
+    pub matrix_homeserver: String,
+    /// The Matrix room to write to, as `!abc123:matrix.org`.
+    pub matrix_room: String,
+    /// The access token of the Matrix account that writes.
+    pub matrix_token: String,
+}
+
+impl Default for Notifications {
+    fn default() -> Self {
+        Self {
+            events: vec![Event::InstanceAdded],
+            webhook_url: String::new(),
+            ntfy_url: String::new(),
+            ntfy_token: String::new(),
+            discord_url: String::new(),
+            slack_url: String::new(),
+            matrix_homeserver: String::new(),
+            matrix_room: String::new(),
+            matrix_token: String::new(),
+        }
+    }
+}
+
+/// Something worth telling the administrator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Event {
+    /// Someone added an instance from the site.
+    InstanceAdded,
+    /// An instance has not answered for long enough to go offline.
+    InstanceOffline,
+    /// An offline instance answered again.
+    InstanceOnline,
+    /// An instance was offline for long enough to be deleted.
+    InstanceDeleted,
+}
+
+impl Event {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InstanceAdded => "instance_added",
+            Self::InstanceOffline => "instance_offline",
+            Self::InstanceOnline => "instance_online",
+            Self::InstanceDeleted => "instance_deleted",
+        }
+    }
+}
+
 impl Config {
     /// Reads a file and lays the environment over it.
     ///
@@ -201,6 +270,18 @@ impl Config {
             if value == 0 {
                 bail!("[collector] {key} has to be at least 1");
             }
+        }
+        let n = &self.notifications;
+        let matrix = [&n.matrix_homeserver, &n.matrix_room, &n.matrix_token];
+        let set = matrix
+            .iter()
+            .filter(|value| !value.trim().is_empty())
+            .count();
+        if set != 0 && set != matrix.len() {
+            bail!(
+                "[notifications] Matrix needs matrix_homeserver, matrix_room and matrix_token, \
+                 all three"
+            );
         }
         Ok(())
     }
@@ -345,6 +426,26 @@ mod tests {
     fn unknown_keys_and_sections_are_refused() {
         assert!(Config::parse("[collector]\nintervall_minutes = 5").is_err());
         assert!(Config::parse("[colector]\ninterval_minutes = 5").is_err());
+    }
+
+    #[test]
+    fn events_are_named_and_matrix_is_all_or_nothing() {
+        let config = Config::parse_with_env(
+            "",
+            env(&[(
+                "MESHVIEW_PLANET_NOTIFICATIONS__EVENTS",
+                r#"["instance_added", "instance_offline"]"#,
+            )]),
+        )
+        .unwrap();
+        assert_eq!(
+            config.notifications.events,
+            [Event::InstanceAdded, Event::InstanceOffline]
+        );
+        assert!(Config::parse("[notifications]\nevents = [\"instance_exploded\"]").is_err());
+        let error = Config::parse("[notifications]\nmatrix_homeserver = \"https://matrix.org\"")
+            .unwrap_err();
+        assert!(error.to_string().contains("all three"));
     }
 
     #[test]
