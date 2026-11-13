@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="{{ ui_language }}" data-bs-theme="light">
+<head>
+    <title>{% block title %}Meshview Planet{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ "The nodes every Meshview instance sees, on one map of the world." | tr }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Meshview Planet">
+    <meta property="og:title" content="Meshview Planet">
+    <meta property="og:description" content="{{ "The nodes every Meshview instance sees, on one map of the world." | tr }}">
+
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48 64x64 256x256" href="/static/favicon.ico">
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/static/meshview-icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+
+    <script>
+        window.meshTranslations = {{ ui_translations | tojson }};
+        window.meshLanguage = {{ ui_language | tojson }};
+    </script>
+    <script src="/static/i18n.js"></script>
+    <script src="/static/theme.js"></script>
+    <link href="/static/vendor/bootstrap-5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/vendor/inter-5.3.0/wght.css">
+    <link rel="stylesheet" href="/static/vendor/inter-5.3.0/wght-italic.css">
+    <link rel="stylesheet" href="/static/icons.css">
+    {% block head %}{% endblock %}
+    <style>
+:root,[data-bs-theme="light"],[data-bs-theme="dark"] {
+    --bs-body-font-family:"Inter Variable",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --bs-primary:var(--mesh-brand);
+    --bs-primary-rgb:var(--mesh-primary-rgb);
+    --bs-link-color:var(--mesh-primary);
+    --bs-link-color-rgb:var(--mesh-primary-rgb);
+    --bs-link-hover-color:var(--mesh-primary-dark);
+    --bs-link-hover-color-rgb:25,70,127;
+    --bs-focus-ring-color:rgba(var(--mesh-primary-rgb),.25);
+}
+[data-bs-theme="dark"] { --bs-link-color:#8bbcff; --bs-link-color-rgb:139,188,255; --bs-link-hover-color:#b6d5ff; --bs-link-hover-color-rgb:182,213,255; }
+[data-bs-theme="light"] body { background:var(--mesh-page); color:var(--mesh-text); }
+input[type="checkbox"],input[type="radio"] { accent-color:var(--mesh-primary); }
+.leaflet-popup-content a,.leaflet-control-attribution a { color:var(--mesh-primary); }
+body { min-height:100dvh; display:flex; flex-direction:column; }
+/* Sticky header that hides while scrolling down and returns on the way up. */
+.mesh-header { position:sticky; top:0; z-index:1100; background:var(--mesh-brand); color:white; box-shadow:0 2px 8px #193d6918; transition:transform .2s ease; }
+.mesh-header.is-hidden { transform:translateY(-100%); }
+@media(prefers-reduced-motion:reduce) { .mesh-header { transition:none; } }
+.mesh-header-inner { max-width:1600px; margin:auto; padding:0 20px; min-height:48px; display:flex; align-items:center; gap:20px; }
+.mesh-brand { display:flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:white; text-decoration:none; flex-shrink:0; }
+.mesh-brand:hover { color:white; }
+.mesh-brand-icon { width:28px; height:28px; display:block; flex-shrink:0; }
+#site-menu { display:flex; align-items:center; gap:4px; flex:1 1 auto; min-width:0; }
+#site-menu a { color:#e6effb; text-decoration:none; padding:6px 10px; border-radius:6px; font-size:14px; line-height:20px; white-space:nowrap; }
+#site-menu a:hover { color:white; background:#ffffff14; }
+#site-menu a.active { color:white; background:#ffffff2e; font-weight:500; }
+#site-menu a:focus-visible { outline:2px solid white; outline-offset:2px; }
+.mesh-nav-external { margin-left:4px; font-size:12px; opacity:.75; }
+.mesh-header-tools { display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
+.mesh-languages { display:inline-flex; border:1px solid #ffffff70; border-radius:6px; overflow:hidden; }
+.mesh-languages a { padding:6px 9px; color:#e6effb; font-size:12px; font-weight:600; line-height:20px; text-decoration:none; }
+.mesh-languages a:hover { color:white; background:#ffffff14; }
+.mesh-languages a[aria-current] { color:white; background:#ffffff2e; }
+.mesh-languages a:focus-visible { outline:2px solid white; outline-offset:-2px; }
+.mesh-menu-toggle { display:none; align-items:center; justify-content:center; color:white; background:none; border:1px solid #ffffff70; border-radius:6px; width:36px; height:36px; padding:0; font-size:20px; line-height:1; }
+.mesh-menu-toggle:hover { background:#ffffff20; }
+.mesh-menu-toggle:focus-visible { outline:2px solid white; outline-offset:3px; }
+.mesh-content { flex:1 0 auto; width:100%; max-width:1600px; margin:0 auto; padding:16px 28px; box-sizing:border-box; }
+.mesh-footer { display:flex; justify-content:space-between; gap:16px; padding:20px 28px; border-top:1px solid var(--mesh-border); color:var(--mesh-muted); font-size:12px; }
+.mesh-footer-project { display:inline-flex; align-items:center; gap:6px; margin-left:auto; white-space:nowrap; }
+.mesh-footer-github, .mesh-footer-about { display:inline-flex; color:var(--mesh-muted); text-decoration:none; }
+.mesh-footer-about { padding:0; border:0; background:none; font:inherit; cursor:pointer; }
+.mesh-footer-github:hover, .mesh-footer-about:hover { color:var(--mesh-primary); }
+.mesh-footer-github .ti { font-size:15px; }
+.mesh-footer-github:focus-visible, .mesh-footer-about:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:2px; border-radius:4px; }
+@media(max-width:700px) { .mesh-footer { flex-direction:column; align-items:center; text-align:center; } .mesh-footer-project { margin-left:0; } }
+.mesh-dialog { width:min(640px, calc(100vw - 32px)); max-height:min(80vh, 720px); padding:0; border:1px solid var(--mesh-border); border-radius:12px; background:var(--mesh-surface); color:var(--mesh-text); box-shadow:0 20px 48px rgba(16,25,37,.3); }
+.mesh-dialog::backdrop { background:rgba(16,25,37,.45); }
+.mesh-dialog[open] { display:flex; flex-direction:column; }
+.mesh-dialog-close { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--mesh-muted); font-size:18px; cursor:pointer; }
+.mesh-dialog-close:hover { background:var(--mesh-soft); color:var(--mesh-text); }
+.mesh-about { width:min(480px, calc(100vw - 32px)); }
+.mesh-about .mesh-dialog-close { position:absolute; top:10px; right:10px; }
+.mesh-about-body { overflow:auto; padding:28px 28px 24px; text-align:center; font-size:14px; line-height:1.55; }
+.mesh-about-body > img { display:block; margin:0 auto 10px; }
+.mesh-about-body h2 { margin:0; font-size:22px; font-weight:650; }
+.mesh-about-body p { margin:0 0 14px; }
+.mesh-about-body .mesh-about-version { margin-bottom:16px; color:var(--mesh-muted); font-size:13px; }
+.mesh-about-links { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin:0 0 18px; }
+.mesh-about-links a { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:8px 10px; border:1px solid var(--mesh-border); border-radius:6px; color:var(--mesh-text); text-decoration:none; font-weight:500; white-space:nowrap; }
+.mesh-about-links a:hover { background:var(--mesh-soft); color:var(--mesh-text); }
+.mesh-about-links .ti { color:var(--mesh-primary); }
+.mesh-about-body .mesh-about-small { margin-bottom:6px; color:var(--mesh-muted); font-size:12.5px; text-wrap:balance; }
+.mesh-about-small a { color:var(--mesh-muted); text-decoration:none; }
+.mesh-about-small a:hover { color:var(--mesh-primary); text-decoration:underline; }
+.mesh-about-heart { color:#d93848; }
+.mesh-about-name { white-space:nowrap; }
+.mesh-about-flag { display:inline; height:.95em; width:auto; vertical-align:-.12em; border-radius:1.5px; }
+@media(max-width:420px) { .mesh-about-links { grid-template-columns:1fr; } }
+/* Page heading: title, context and actions on one line. */
+.mesh-heading { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:8px 14px; min-height:40px; margin-bottom:12px; }
+.mesh-heading h1 { font-size:22px; font-weight:650; line-height:1.2; margin:0; }
+.mesh-heading-title { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; min-width:0; }
+.mesh-heading p { margin:0; color:var(--mesh-muted); font-size:13px; }
+.mesh-heading-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.mesh-heading-actions label { margin:0; font-size:12px; color:var(--mesh-muted); }
+/* Shared controls. */
+.mesh-select,.mesh-input { min-width:0; max-width:100%; padding:7px 10px; border:1px solid var(--mesh-border); border-radius:6px; background:var(--mesh-surface); color:var(--mesh-text); font-size:13px; }
+.mesh-select:focus-visible,.mesh-input:focus-visible,.mesh-button:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:2px; }
+.mesh-button { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 14px; border:1px solid var(--mesh-brand); border-radius:6px; background:var(--mesh-brand); color:white; font-size:13px; font-weight:500; cursor:pointer; }
+.mesh-button:hover { background:var(--mesh-brand-deep); border-color:var(--mesh-brand-deep); }
+.mesh-button:disabled { opacity:.6; cursor:default; }
+/* Figures above the content. */
+.mesh-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin-bottom:12px; }
+@media(max-width:1199px) { .mesh-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.mesh-metric { display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:14px; row-gap:1px; align-items:center; align-content:start; padding:14px 18px; background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:9px; box-shadow:0 2px 4px #24324704; }
+.mesh-metric > :not(.mesh-metric-icon) { grid-column:2; min-width:0; }
+.mesh-metric-icon { grid-row:1 / span 3; display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:10px; background:var(--mesh-soft); color:var(--mesh-primary); font-size:20px; }
+.mesh-metric > span:not(.mesh-metric-icon) { font-size:12px; font-weight:500; color:var(--mesh-muted); }
+.mesh-metric strong { font-size:24px; line-height:1.25; font-weight:650; color:var(--mesh-primary); font-variant-numeric:tabular-nums; }
+.mesh-metric small { font-size:11px; color:var(--mesh-muted); }
+/* Panels. */
+.mesh-panel { background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:9px; overflow:hidden; min-width:0; margin-bottom:12px; }
+.mesh-panel-title { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--mesh-border); gap:8px; min-height:56px; }
+.mesh-panel-title h2 { font-size:15px; font-weight:650; margin:0; }
+.mesh-panel-body { padding:16px 18px; font-size:14px; line-height:1.6; }
+.mesh-panel-body p:last-child { margin-bottom:0; }
+.mesh-count { color:var(--mesh-primary); background:var(--mesh-soft); padding:3px 8px; border-radius:5px; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+/* Loading spinner: .is-loading on placeholder text. */
+@keyframes mesh-spin { to { transform:rotate(360deg); } }
+.is-loading::before { content:""; display:inline-block; flex-shrink:0; width:.95em; height:.95em; margin-right:.5em; vertical-align:-.15em; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; opacity:.8; animation:mesh-spin .8s linear infinite; }
+@media(prefers-reduced-motion:reduce) { .is-loading::before { animation-duration:2.4s; } }
+@media(max-width:860px) {
+    .mesh-header-inner { gap:8px; padding:0 12px 0 16px; min-height:52px; }
+    .mesh-brand { min-width:0; flex:1 1 auto; }
+    .mesh-menu-toggle { display:inline-flex; order:3; }
+    .mesh-header-tools { margin-left:0; }
+    /* The menu opens as a panel under the header. */
+    #site-menu { display:none; position:absolute; top:100%; left:0; right:0; flex-direction:column; align-items:stretch; gap:0; padding:4px 0 10px; background:var(--mesh-surface); border-bottom:1px solid var(--mesh-border); box-shadow:0 12px 24px rgba(16,25,37,.25); }
+    #site-menu.is-open { display:flex; }
+    #site-menu a { display:flex; align-items:center; justify-content:space-between; min-height:48px; padding:0 20px; border-radius:0; color:var(--mesh-text); font-size:15px; }
+    #site-menu a:hover { color:var(--mesh-text); background:var(--mesh-soft); }
+    #site-menu a.active { color:var(--mesh-primary); background:var(--mesh-soft); font-weight:600; box-shadow:inset 3px 0 0 var(--mesh-primary); }
+    #site-menu a:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:-2px; }
+}
+@media(max-width:700px) {
+    .mesh-content { padding:16px 14px; }
+    .mesh-metrics { gap:10px; }
+    .mesh-metric { padding:12px 14px; column-gap:8px; }
+    .mesh-metric > :not(.mesh-metric-icon) { grid-column:1 / -1; }
+    .mesh-metric > span:not(.mesh-metric-icon) { grid-column:2; grid-row:1; }
+    .mesh-metric-icon { grid-row:1; width:24px; height:24px; border-radius:6px; font-size:15px; }
+    .mesh-metric strong { font-size:22px; }
+}
+    </style>
+{% include "theme-styles.html" %}
+    {% block css %}{% endblock %}
+</head>
+
+<body>
+<header class="mesh-header">
+    <div class="mesh-header-inner">
+        <a class="mesh-brand" href="/"><img class="mesh-brand-icon" src="/static/meshview-icon.svg" width="28" height="28" alt=""> <span>Meshview Planet</span></a>
+        <button class="mesh-menu-toggle" type="button" aria-label="{{ "Toggle navigation" | tr }}" aria-expanded="false" aria-controls="site-menu"><span class="ti ti-menu-2" aria-hidden="true"></span></button>
+        <nav id="site-menu" aria-label="{{ "Main navigation" | tr }}">
+            <a href="/"{% if page == "map" %} class="active" aria-current="page"{% endif %}>{{ "Map" | tr }}</a>
+            <a href="/instances"{% if page == "instances" %} class="active" aria-current="page"{% endif %}>{{ "Instances" | tr }}</a>
+            <a href="/api/docs" target="_blank" rel="noopener">API<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
+            <a href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener">Meshview<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
+        </nav>
+        <div class="mesh-header-tools">
+            <nav class="mesh-languages" aria-label="{{ "Language" | tr }}">
+                <a href="?lang=en" hreflang="en" lang="en" title="English"{% if ui_language == "en" %} aria-current="true"{% endif %}>EN</a>
+                <a href="?lang=es" hreflang="es" lang="es" title="Español"{% if ui_language == "es" %} aria-current="true"{% endif %}>ES</a>
+            </nav>
+            <button class="mesh-theme-toggle" type="button" data-theme-toggle aria-label="{{ "Switch to night mode" | tr }}" aria-pressed="false" title="{{ "Night mode" | tr }}"><svg class="theme-icon theme-icon--sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><svg class="theme-icon theme-icon--moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg></button>
+        </div>
+    </div>
+</header>
+<main class="mesh-content">
+{% block body %}{% endblock %}
+</main>
+<footer class="mesh-footer">
+    <span>{{ "The nodes every Meshview instance sees, on one map of the world." | tr }}</span>
+    <span class="mesh-footer-project">
+        <a class="mesh-footer-github" href="https://github.com/meshview/planet" target="_blank" rel="noopener" title="{{ "Meshview Planet on GitHub" | tr }}" aria-label="{{ "Meshview Planet on GitHub" | tr }}"><span class="ti ti-brand-github" aria-hidden="true"></span></a>
+        <button type="button" id="site-version" class="mesh-footer-about" aria-haspopup="dialog" aria-controls="mesh-about" title="{{ "About Meshview Planet" | tr }}">Meshview Planet {{ build_version }}{% if build_revision %} ({{ build_revision }}){% endif %}</button>
+    </span>
+</footer>
+<dialog id="mesh-about" class="mesh-dialog mesh-about" aria-labelledby="mesh-about-title">
+    <button type="button" class="mesh-dialog-close" aria-label="{{ "Close" | tr }}" title="{{ "Close" | tr }}"><span class="ti ti-x" aria-hidden="true"></span></button>
+    <div class="mesh-about-body">
+        <img src="/static/meshview-icon.svg" width="72" height="72" alt="">
+        <h2 id="mesh-about-title">Meshview Planet</h2>
+        <p class="mesh-about-version">{{ build_version }}{% if build_revision %} ({{ build_revision }}){% endif %}</p>
+        <p>{{ "Meshview Planet gathers the nodes every Meshview instance sees into one map of the world, and keeps the list of those instances." | tr }}</p>
+        <nav class="mesh-about-links" aria-label="{{ "About Meshview Planet" | tr }}">
+            <a href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener"><span class="ti ti-world-www" aria-hidden="true"></span> Meshview</a>
+            <a href="https://github.com/meshview/planet" target="_blank" rel="noopener"><span class="ti ti-brand-github" aria-hidden="true"></span> GitHub</a>
+            <a href="https://github.com/meshview/planet/issues" target="_blank" rel="noopener"><span class="ti ti-bug" aria-hidden="true"></span> {{ "Report a problem" | tr }}</a>
+            <a href="/api/docs" target="_blank" rel="noopener"><span class="ti ti-plug" aria-hidden="true"></span> API</a>
+        </nav>
+        <p class="mesh-about-small"><a href="https://github.com/meshview/planet/blob/master/LICENSE" target="_blank" rel="noopener">{{ "Free software under the AGPL, version 3 or later" | tr }}</a></p>
+        <p class="mesh-about-small">{{ "Made with" | tr }} <span class="mesh-about-heart" role="img" aria-label="{{ "love" | tr }}">♥</span> {{ "in Galicia, Spain, Europe" | tr }} <img class="mesh-about-flag" src="/static/flag-eu.svg" width="21" height="14" alt=""> {{ "by" | tr }} <span class="mesh-about-name">Óscar García Amor</span></p>
+    </div>
+</dialog>
+
+<script>
+// The about dialog, opened from the version in the footer.
+(() => {
+    const dialog = document.getElementById("mesh-about");
+    document.getElementById("site-version").addEventListener("click", () => dialog.showModal());
+    dialog.querySelector(".mesh-dialog-close").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+})();
+
+// The language links keep the rest of the address.
+document.querySelectorAll(".mesh-languages a").forEach(link => {
+    const url = new URL(location.href);
+    url.searchParams.set("lang", link.hreflang);
+    link.href = url.pathname + url.search + url.hash;
+});
+
+// Header: hide while scrolling down, show again when scrolling up.
+(() => {
+    const header = document.querySelector(".mesh-header");
+    let lastY = window.scrollY;
+    const update = () => {
+        const y = window.scrollY;
+        const busy = header.querySelector('[aria-expanded="true"]') || header.contains(document.activeElement);
+        if (busy || y <= header.offsetHeight) {
+            header.classList.remove("is-hidden");
+            lastY = y;
+            return;
+        }
+        if (Math.abs(y - lastY) < 6) return;
+        header.classList.toggle("is-hidden", y > lastY);
+        lastY = y;
+    };
+    let frame = 0;
+    window.addEventListener("scroll", () => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(update);
+    }, {passive: true});
+    header.addEventListener("focusin", () => header.classList.remove("is-hidden"));
+})();
+
+// The menu, as a panel on narrow screens.
+(() => {
+    const toggle = document.querySelector(".mesh-menu-toggle");
+    const menu = document.getElementById("site-menu");
+    const icon = toggle.querySelector(".ti");
+    const setOpen = open => {
+        toggle.setAttribute("aria-expanded", String(open));
+        menu.classList.toggle("is-open", open);
+        icon.classList.toggle("ti-menu-2", !open);
+        icon.classList.toggle("ti-x", open);
+    };
+    toggle.addEventListener("click", () => {
+        const open = toggle.getAttribute("aria-expanded") !== "true";
+        setOpen(open);
+        if (open) menu.querySelector("a")?.focus();
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && menu.classList.contains("is-open")) {
+            setOpen(false);
+            toggle.focus();
+        }
+    });
+    document.addEventListener("click", event => {
+        if (menu.classList.contains("is-open") && !menu.contains(event.target) && !toggle.contains(event.target)) setOpen(false);
+    });
+})();
+
+// Numbers and moments in the page's language.
+window.formatNumber = value => new Intl.NumberFormat(MeshI18n.language).format(value);
+window.formatMoment = seconds => new Date(seconds * 1000).toLocaleString(MeshI18n.language, {
+    year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+});
+// How long ago, roughly, in the page's language.
+window.formatAgo = seconds => {
+    const relative = new Intl.RelativeTimeFormat(MeshI18n.language, {numeric: "auto"});
+    const diff = seconds - Date.now() / 1000;
+    const units = [["day", 86400], ["hour", 3600], ["minute", 60]];
+    for (const [unit, size] of units) {
+        if (Math.abs(diff) >= size) return relative.format(Math.round(diff / size), unit);
+    }
+    return relative.format(0, "minute");
+};
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

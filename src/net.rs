@@ -308,12 +308,18 @@ impl std::error::Error for FetchError {}
 /// An error and its causes in one line: reqwest's own message alone is often
 /// just "error sending request".
 fn error_chain(error: &dyn std::error::Error) -> String {
+    // reqwest's own message only repeats the URL, which is the instance's.
     let mut text = error.to_string();
+    if text.starts_with("error sending request") && error.source().is_some() {
+        text.clear();
+    }
     let mut source = error.source();
     while let Some(cause) = source {
         let message = cause.to_string();
         if !text.contains(&message) {
-            text.push_str(": ");
+            if !text.is_empty() {
+                text.push_str(": ");
+            }
             text.push_str(&message);
         }
         source = cause.source();

@@ -7,6 +7,7 @@
 pub mod cache;
 pub mod error;
 mod legacy;
+pub mod pages;
 pub mod v1;
 
 use crate::collector::{Collector, unix_now};
@@ -15,7 +16,7 @@ use crate::submit::RateLimiter;
 use axum::extract::{ConnectInfo, FromRequestParts, Query};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, Method};
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use cache::ResponseCache;
@@ -104,7 +105,12 @@ pub fn router(state: AppState) -> Router {
         .allow_origin(Any)
         .allow_methods([Method::GET, Method::HEAD]);
 
+    let pages = pages::Pages::new(&state.config)
+        .expect("the pages are built in and render with any configuration");
+    let missing = pages.clone();
+
     api.merge(legacy::router())
+        .merge(pages.router())
         .merge(Scalar::with_url(DOCS_PATH, reference).custom_html(SCALAR_HTML))
         .route(
             OPENAPI_PATH,
@@ -118,7 +124,13 @@ pub fn router(state: AppState) -> Router {
                 }
             }),
         )
-        .fallback(|| async { ApiError::not_found("Not found") })
+        .fallback(move |request: axum::extract::Request| async move {
+            if request.uri().path().starts_with("/api/") {
+                ApiError::not_found("Not found").into_response()
+            } else {
+                missing.not_found(&request)
+            }
+        })
         .layer(cors)
         .with_state(state)
 }
