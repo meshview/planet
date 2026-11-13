@@ -64,6 +64,9 @@ fn every_channel(base: &str, events: Vec<Event>) -> Notifications {
         matrix_homeserver: format!("{base}/"),
         matrix_room: "!room:example.org".into(),
         matrix_token: "syt_secret".into(),
+        telegram_token: "123456:ABC-secret".into(),
+        telegram_chat_id: "-1001234567890".into(),
+        telegram_api_url: format!("{base}/"),
     }
 }
 
@@ -84,7 +87,7 @@ async fn every_channel_gets_the_notice_in_its_own_shape() {
     let (base, received) = receiver().await;
     let notifier = Notifier::new(&every_channel(&base, vec![Event::InstanceAdded])).unwrap();
     let results = notifier.deliver(&added()).await;
-    assert_eq!(results.len(), 5);
+    assert_eq!(results.len(), 6);
     for (channel, result) in &results {
         assert!(result.is_ok(), "{}: {result:?}", channel.name());
     }
@@ -141,6 +144,39 @@ async fn every_channel_gets_the_notice_in_its_own_shape() {
     );
     assert_eq!(headers[header::AUTHORIZATION], "Bearer syt_secret");
     assert_eq!(matrix["msgtype"], "m.text");
+
+    let (method, _, _, telegram) = find("/bot123456:ABC-secret/sendMessage");
+    assert_eq!(method, Method::POST);
+    assert_eq!(telegram["chat_id"], "-1001234567890");
+    assert!(
+        telegram["text"]
+            .as_str()
+            .unwrap()
+            .starts_with("New instance: Galicia, Spain\nhttps://meshview.example.org")
+    );
+    // Plain text: nothing in it is read as Markdown or HTML.
+    assert!(telegram.get("parse_mode").is_none());
+    assert_eq!(telegram["link_preview_options"]["is_disabled"], true);
+}
+
+#[tokio::test]
+async fn secrets_in_a_channel_s_url_stay_out_of_its_errors() {
+    // A port nothing listens on: bound, then let go.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let nowhere = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let notifier = Notifier::new(&Notifications {
+        telegram_token: "123456:ABC-secret".into(),
+        telegram_chat_id: "42".into(),
+        telegram_api_url: nowhere.clone(),
+        discord_url: format!("{nowhere}/api/webhooks/1/discord-secret"),
+        ..Notifications::default()
+    })
+    .unwrap();
+    for (channel, result) in notifier.deliver(&added()).await {
+        let error = format!("{:#}", result.unwrap_err());
+        assert!(!error.contains("secret"), "{}: {error}", channel.name());
+    }
 }
 
 #[tokio::test]

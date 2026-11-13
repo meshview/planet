@@ -121,7 +121,7 @@ location / {
 
 The administrator can be told when an instance is added from the site, and,
 if they want, when one goes offline, comes back or is deleted: by a webhook
-with JSON, ntfy, Discord, Slack or a Matrix room, any number at once. See
+with JSON, ntfy, Discord, Slack, a Matrix room or a Telegram chat, any number at once. See
 [`[notifications]`](configuration.md#notifications). The log says at start
 which channels are on and for what. Notices still on their way when the
 process stops get a few seconds to go.

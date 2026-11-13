@@ -59,3 +59,8 @@ slack_url = ""
 matrix_homeserver = ""
 matrix_room = ""
 matrix_token = ""
+# A Telegram chat: the bot's token, from BotFather, and the chat it writes to.
+# The API is Telegram's own unless you run a Bot API server.
+telegram_token = ""
+telegram_chat_id = ""
+telegram_api_url = "https://api.telegram.org"

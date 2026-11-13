@@ -172,6 +172,13 @@ pub struct Notifications {
     pub matrix_room: String,
     /// The access token of the Matrix account that writes.
     pub matrix_token: String,
+    /// A Telegram bot's token, from BotFather.
+    pub telegram_token: String,
+    /// The chat the bot writes to: a user's, a group's or a channel's id, or
+    /// a public channel's `@name`.
+    pub telegram_chat_id: String,
+    /// Telegram's Bot API, or a Bot API server of your own.
+    pub telegram_api_url: String,
 }
 
 impl Default for Notifications {
@@ -186,6 +193,23 @@ impl Default for Notifications {
             matrix_homeserver: String::new(),
             matrix_room: String::new(),
             matrix_token: String::new(),
+            telegram_token: String::new(),
+            telegram_chat_id: String::new(),
+            telegram_api_url: TELEGRAM_API.into(),
+        }
+    }
+}
+
+/// Telegram's own Bot API.
+pub const TELEGRAM_API: &str = "https://api.telegram.org";
+
+impl Notifications {
+    /// The Bot API to send through: the one configured, or Telegram's when
+    /// that is left empty.
+    pub fn telegram_api(&self) -> &str {
+        match self.telegram_api_url.trim().trim_end_matches('/') {
+            "" => TELEGRAM_API,
+            url => url,
         }
     }
 }
@@ -282,6 +306,9 @@ impl Config {
                 "[notifications] Matrix needs matrix_homeserver, matrix_room and matrix_token, \
                  all three"
             );
+        }
+        if n.telegram_token.trim().is_empty() != n.telegram_chat_id.trim().is_empty() {
+            bail!("[notifications] Telegram needs telegram_token and telegram_chat_id, both");
         }
         Ok(())
     }
@@ -446,6 +473,31 @@ mod tests {
         let error = Config::parse("[notifications]\nmatrix_homeserver = \"https://matrix.org\"")
             .unwrap_err();
         assert!(error.to_string().contains("all three"));
+        let error = Config::parse("[notifications]\ntelegram_token = \"123:abc\"").unwrap_err();
+        assert!(error.to_string().contains("both"));
+    }
+
+    #[test]
+    fn telegram_s_own_api_unless_another_is_given() {
+        let config =
+            Config::parse("[notifications]\ntelegram_token = \"1:a\"\ntelegram_chat_id = \"2\"")
+                .unwrap();
+        assert_eq!(
+            config.notifications.telegram_api(),
+            "https://api.telegram.org"
+        );
+        let config = Config::parse_with_env(
+            "",
+            env(&[("MESHVIEW_PLANET_NOTIFICATIONS__TELEGRAM_API_URL", "")]),
+        )
+        .unwrap();
+        assert_eq!(
+            config.notifications.telegram_api(),
+            "https://api.telegram.org"
+        );
+        let config =
+            Config::parse("[notifications]\ntelegram_api_url = \"http://10.0.0.5:8081/\"").unwrap();
+        assert_eq!(config.notifications.telegram_api(), "http://10.0.0.5:8081");
     }
 
     #[test]

@@ -110,6 +110,9 @@ instances, the channels may be on a private network.
 | `matrix_homeserver` | `""` | A Matrix homeserver, as `https://matrix.org`. Matrix needs this and the two below, all three. |
 | `matrix_room` | `""` | The id of the room to write to, as `!abc123:matrix.org`, which the account has joined. |
 | `matrix_token` | `""` | The access token of the account that writes. |
+| `telegram_token` | `""` | A Telegram bot's token, from [BotFather](https://t.me/BotFather). Telegram needs this and `telegram_chat_id`, both. |
+| `telegram_chat_id` | `""` | The chat the bot writes to: a user's, a group's or a channel's id (`-100…` for groups and channels), or a public channel's `@name`. The bot has to be in it, or have been started by the user. |
+| `telegram_api_url` | `"https://api.telegram.org"` | Telegram's Bot API, or a [Bot API server](https://github.com/tdlib/telegram-bot-api) of your own. Left out or empty, Telegram's. |
 
 A notice, as ntfy shows it:
 

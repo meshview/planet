@@ -6,7 +6,8 @@
 //! deleted.
 //!
 //! Each channel configured gets every event asked for: a generic webhook, as
-//! JSON a program can read; ntfy; Discord; Slack; and a Matrix room. Notices
+//! JSON a program can read; ntfy; Discord; Slack; a Matrix room; and a
+//! Telegram chat. Notices
 //! are sent in the background, so a channel that is down never holds up a
 //! submission or a collection: what fails is logged, and that is all.
 //!
@@ -223,6 +224,7 @@ pub enum Channel {
     Discord,
     Slack,
     Matrix,
+    Telegram,
 }
 
 impl Channel {
@@ -233,6 +235,7 @@ impl Channel {
             Self::Discord => "Discord",
             Self::Slack => "Slack",
             Self::Matrix => "Matrix",
+            Self::Telegram => "Telegram",
         }
     }
 }
@@ -271,6 +274,9 @@ impl Notifier {
         }
         if set(&config.matrix_homeserver) {
             channels.push(Channel::Matrix);
+        }
+        if set(&config.telegram_token) {
+            channels.push(Channel::Telegram);
         }
         if channels.is_empty() || config.events.is_empty() {
             return Ok(Self::default());
@@ -359,6 +365,7 @@ impl Notifier {
                 Channel::Discord => self.discord(inner, notice).await,
                 Channel::Slack => self.slack(inner, notice).await,
                 Channel::Matrix => self.matrix(inner, notice).await,
+                Channel::Telegram => self.telegram(inner, notice).await,
             };
             results.push((channel, result));
         }
@@ -370,7 +377,7 @@ impl Notifier {
         if !token.trim().is_empty() {
             request = request.bearer_auth(token.trim());
         }
-        check(request.send().await?).await
+        check(request.send().await.map_err(without_url)?).await
     }
 
     async fn webhook(&self, inner: &Inner, notice: &Notice) -> Result<()> {
@@ -449,8 +456,32 @@ impl Notifier {
             .put(url)
             .bearer_auth(config.matrix_token.trim())
             .json(&body);
-        check(request.send().await?).await
+        check(request.send().await.map_err(without_url)?).await
     }
+
+    /// Telegram's Bot API, in plain text: nothing a submitter wrote is read
+    /// as Markdown or HTML.
+    async fn telegram(&self, inner: &Inner, notice: &Notice) -> Result<()> {
+        let config = &inner.config;
+        let url = format!(
+            "{}/bot{}/sendMessage",
+            config.telegram_api(),
+            config.telegram_token.trim()
+        );
+        let body = json!({
+            "chat_id": config.telegram_chat_id.trim(),
+            "text": format!("{}\n{}", notice.title(), notice.message()),
+            "link_preview_options": {"is_disabled": true},
+        });
+        self.post(inner, &url, &body, "").await
+    }
+}
+
+/// A request's error without its URL, which for Telegram holds the bot's
+/// token, and for Discord and Slack their webhook's secret: errors go to the
+/// log.
+fn without_url(error: reqwest::Error) -> reqwest::Error {
+    error.without_url()
 }
 
 /// A failure when the channel did not take the notice, with what it said.
