@@ -221,6 +221,7 @@ async fn instances_in_both_shapes() {
     );
     assert_eq!(instance["version"], "5.0.0");
     assert_eq!(instance["git_revision_short"], "21714da");
+    assert_eq!(instance["flavor"], "rust");
     assert_eq!(instance["node_count"], 12);
     assert_eq!(instance["mapped_count"], 8);
     // Both collections were today: one daily count, the latest.

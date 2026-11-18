@@ -234,6 +234,10 @@ pub struct Instance {
     pub git_revision: Option<String>,
     #[schema(example = "21714da")]
     pub git_revision_short: Option<String>,
+    /// Which Meshview it is, as its `/version` says: `rust`, or null when it
+    /// does not say, as the Python one.
+    #[schema(example = "rust")]
+    pub flavor: Option<String>,
     /// The nodes of its latest good collection.
     #[schema(example = 1283)]
     pub node_count: i64,
@@ -276,6 +280,7 @@ impl From<InstanceSummary> for Instance {
             version: i.version,
             git_revision: i.git_revision,
             git_revision_short: i.git_revision_short,
+            flavor: i.flavor,
             node_count: summary.node_count,
             mapped_count: summary.mapped_count,
             trend_30d,

@@ -94,7 +94,7 @@ async fn version(State(b): State<Behaviour>) -> Response {
         Kind::Rust => axum::Json(json!({
             "version": "5.0.0", "release_date": "2026-11-13",
             "git_revision": "21714da68cd669122f18abbf798341dee3f32d1b",
-            "git_revision_short": "21714da"
+            "git_revision_short": "21714da", "flavor": "rust"
         }))
         .into_response(),
         Kind::Python | Kind::Huge => axum::Json(json!({

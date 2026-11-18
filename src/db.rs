@@ -73,6 +73,7 @@ pub struct Instance {
     pub version: Option<String>,
     pub git_revision: Option<String>,
     pub git_revision_short: Option<String>,
+    pub flavor: Option<String>,
     pub added_at: i64,
     pub last_attempt_at: Option<i64>,
     pub last_success_at: Option<i64>,
@@ -87,6 +88,7 @@ pub struct Version {
     pub version: String,
     pub git_revision: Option<String>,
     pub git_revision_short: Option<String>,
+    pub flavor: Option<String>,
 }
 
 /// A node, as an instance reports it.
@@ -204,13 +206,14 @@ pub async fn record_success(
     let mut tx = pool.begin().await?;
 
     sqlx::query(
-        "UPDATE instance SET version = ?, git_revision = ?, git_revision_short = ?,
+        "UPDATE instance SET version = ?, git_revision = ?, git_revision_short = ?, flavor = ?,
              last_attempt_at = ?, last_success_at = ?, last_error = NULL, offline_since = NULL
          WHERE id = ?",
     )
     .bind(&version.version)
     .bind(&version.git_revision)
     .bind(&version.git_revision_short)
+    .bind(&version.flavor)
     .bind(now)
     .bind(now)
     .bind(instance)

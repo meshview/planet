@@ -43,8 +43,12 @@
     }
 
     function row(instance) {
+        // Meshview Rust says so in its /version; the Python one says nothing.
+        const flavor = instance.flavor === "rust"
+            ? `<span class="ti ti-brand-rust" role="img" aria-label="Rust" title="Meshview Rust"></span> `
+            : "";
         const version = instance.version
-            ? `${escapeHtml(instance.version)}${instance.git_revision_short && instance.git_revision_short !== "unknown"
+            ? `${flavor}${escapeHtml(instance.version)}${instance.git_revision_short && instance.git_revision_short !== "unknown"
                 ? ` <small>(${escapeHtml(instance.git_revision_short)})</small>` : ""}`
             : "—";
         const collected = instance.last_success_at

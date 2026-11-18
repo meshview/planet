@@ -95,6 +95,7 @@ struct VersionBody {
     version: String,
     git_revision: Option<String>,
     git_revision_short: Option<String>,
+    flavor: Option<String>,
 }
 
 /// Reads `/version`. Only `version` is required: forks answer just that.
@@ -106,6 +107,7 @@ pub fn parse_version(body: &[u8]) -> Result<Version, String> {
         version,
         git_revision: parsed.git_revision.and_then(|text| clean(text, 64)),
         git_revision_short: parsed.git_revision_short.and_then(|text| clean(text, 16)),
+        flavor: parsed.flavor.and_then(|text| clean(text, 16)),
     })
 }
 
@@ -201,17 +203,19 @@ mod tests {
 
     #[test]
     fn versions_of_every_kind_are_read() {
-        let rust = br#"{"version":"5.0.0-dev","release_date":"2026-11-13","git_revision":"21714da68cd669122f18abbf798341dee3f32d1b","git_revision_short":"21714da"}"#;
+        let rust = br#"{"version":"1.0.0-dev","release_date":"2026-11-13","git_revision":"21714da68cd669122f18abbf798341dee3f32d1b","git_revision_short":"21714da","flavor":"rust"}"#;
         assert_eq!(
             parse_version(rust).unwrap(),
             Version {
-                version: "5.0.0-dev".into(),
+                version: "1.0.0-dev".into(),
                 git_revision: Some("21714da68cd669122f18abbf798341dee3f32d1b".into()),
                 git_revision_short: Some("21714da".into()),
+                flavor: Some("rust".into()),
             }
         );
         let plus = br#"{"version":"plus 1.0.0"}"#;
         assert_eq!(parse_version(plus).unwrap().version, "plus 1.0.0");
+        assert_eq!(parse_version(plus).unwrap().flavor, None);
         assert!(parse_version(b"<html></html>").is_err());
         assert!(parse_version(br#"{"version":""}"#).is_err());
         assert!(parse_version(br#"{"name":"x"}"#).is_err());

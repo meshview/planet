@@ -213,6 +213,7 @@ fn the_list_is_grouped_by_state() {
         version: Some("5.0.0".into()),
         git_revision: None,
         git_revision_short: None,
+        flavor: None,
         added_at: NOW - 40 * DAY,
         last_attempt_at: Some(NOW - 600),
         last_success_at: Some(NOW - 600),

@@ -38,6 +38,8 @@ async fn every_kind_of_meshview_is_read() {
     let stored = db::instances(&pool).await.unwrap();
     assert_eq!(stored[0].version.as_deref(), Some("5.0.0"));
     assert_eq!(stored[0].git_revision_short.as_deref(), Some("21714da"));
+    assert_eq!(stored[0].flavor.as_deref(), Some("rust"));
+    assert_eq!(stored[1].flavor, None);
     assert_eq!(stored[1].version.as_deref(), Some("4.0.0"));
     assert_eq!(stored[2].version.as_deref(), Some("plus 1.0.0"));
     assert_eq!(stored[2].git_revision, None);

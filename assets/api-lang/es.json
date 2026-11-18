@@ -101,6 +101,7 @@
   "Versions": "Versiones",
   "What is answering": "Qué está respondiendo",
   "What it runs, from its `/version`.": "Qué ejecuta, según su `/version`.",
+  "Which Meshview it is, as its `/version` says: `rust`, or null when it does not say, as the Python one.": "Qué Meshview es, según su `/version`: `rust`, o null cuando no lo dice, como el de Python.",
   "What it runs.": "Qué ejecuta.",
   "What was wrong, for a program: `bad_request`, `invalid_url`, `private_address`, `area_required`, `unknown_country`, `unknown_region`, `duplicate`, `blocked`, `not_meshview`, `rate_limited`, `disabled`, `not_found` or `internal`.": "Qué estaba mal, para un programa: `bad_request`, `invalid_url`, `private_address`, `area_required`, `unknown_country`, `unknown_region`, `duplicate`, `blocked`, `not_meshview`, `rate_limited`, `disabled`, `not_found` o `internal`.",
   "What was wrong, in English, for a person.": "Qué estaba mal, en inglés, para una persona.",

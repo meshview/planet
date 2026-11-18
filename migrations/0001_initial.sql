@@ -12,6 +12,9 @@ CREATE TABLE instance (
     version TEXT,
     git_revision TEXT,
     git_revision_short TEXT,
+    -- Which Meshview it is, as its /version says: `rust`, or null when it
+    -- does not say, as the Python one.
+    flavor TEXT,
     -- Unix seconds.
     added_at INTEGER NOT NULL,
     last_attempt_at INTEGER,
