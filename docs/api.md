@@ -13,8 +13,8 @@ Both are in the visitor's language, as the pages are: English or Spanish,
 chosen with `?lang=en` or `?lang=es`, else from the language chosen on the site
 (a cookie), else from the browser's.
 
-This page is about what is not in the reference: Meshview World's
-addresses, which keep working, and what they answer differently here.
+This page is about what is not in the reference: the original addresses,
+which keep working, and what they answer differently from the original scheme.
 
 ## Version 1
 
@@ -25,8 +25,8 @@ break a client goes into a next version, served beside it.
 
 ## The original addresses
 
-Meshview Planet takes over from Meshview World, whose API other
-sites used. Its addresses keep answering in its shapes:
+Before `/api/v1` there was an original scheme, which other sites use. Its
+addresses keep answering in its shapes:
 
 | Address | Answers |
 |---|---|
@@ -38,9 +38,9 @@ sites used. Its addresses keep answering in its shapes:
 
 New clients should use `/api/v1`, which says more and is documented.
 
-## Differences from Meshview World
+## Differences from the original scheme
 
-| | Meshview World | Meshview Planet |
+| | Original scheme | Meshview Rust Planet |
 |---|---|---|
 | `name`, `source_name` | Free text, whatever the submitter typed | The area's English name, as "Galicia, Spain", from its codes. |
 | `POST /api/instances` | `{name, url}`, with any name | `{url, country, region}`, the area from `/api/v1/areas`. A `name` without a `country` is refused with 400 and `area_required`. |

@@ -34,6 +34,7 @@ pub const SEARCHED: [&str; 2] = ["config.toml", "/etc/meshview-planet/config.tom
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
     pub server: Server,
+    pub site: Site,
     pub database: Database,
     pub collector: Collector,
     pub submissions: Submissions,
@@ -144,6 +145,15 @@ impl Default for Collector {
             allow_private_addresses: false,
         }
     }
+}
+
+/// `[site]`: how the pages behave.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Site {
+    /// The map's kiosk mode (`/?kiosk`) without its full screen button, so
+    /// that nothing on the screen leaves it: for a kiosk proper.
+    pub map_kiosk_lock: bool,
 }
 
 /// `[submissions]`: instances added through the web.

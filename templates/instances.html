@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ "Instances" | tr }} · Meshview Planet{% endblock %}
+{% block title %}{{ "Instances" | tr }} · Meshview Rust Planet{% endblock %}
 
 {% block head %}
 <script src="/static/vendor/chartjs-4.6.1/dist/chart.umd.min.js"></script>
@@ -12,117 +12,97 @@
    legend below, both in HTML; the legend scrolls when the instances are many. */
 .history { padding:12px 16px 14px; }
 .history-axes { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; color:var(--mesh-muted); font-size:12px; }
-.history-axes .is-total { color:var(--mesh-text); font-weight:700; }
+.history-axes .is-total { color:var(--mesh-text); font-weight:650; }
 .history-chart { position:relative; height:300px; }
 .history-status { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; margin:0; padding:0 16px; color:var(--mesh-muted); font-size:13px; text-align:center; }
 .history-status:empty { display:none; }
 .history-legend { display:flex; flex-wrap:wrap; gap:2px 6px; max-height:84px; margin-top:10px; overflow:auto; }
-.history-legend button { display:inline-flex; align-items:center; gap:6px; padding:3px 6px; border:0; border-radius:5px; background:none; color:var(--mesh-muted); font:inherit; font-size:12px; cursor:pointer; }
-.history-legend button:hover { background:var(--mesh-soft); }
+.history-legend button { display:inline-flex; align-items:center; gap:6px; padding:3px 6px; border:0; border-radius:6px; background:none; color:var(--mesh-muted); font-size:12px; }
+.history-legend button:hover { background:var(--mesh-soft); color:var(--mesh-text); }
 .history-legend button[aria-pressed="false"] { opacity:.45; text-decoration:line-through; }
 .history-legend .swatch { flex:none; width:18px; height:0; border-top:3px solid currentColor; }
 .history-legend .is-total .swatch { border-top-style:dashed; }
-/* The column headings stay at the top while the list scrolls, under the page
-   header while it shows (--header-offset, base.html), as Meshview's lists do.
-   So that they follow the page, nothing around them scrolls (clip, not auto
-   or hidden), unless the table is too wide for the screen: then it scrolls
-   sideways (.is-wide, instances.js) and the headings stay where they are. */
-.mesh-panel:has(> .planet-table-wrap) { overflow:clip; }
-.planet-table-wrap { width:100%; overflow:clip; }
-.planet-table-wrap.is-wide { overflow:auto; }
-.planet-table th { position:sticky; top:0; z-index:2; transition:top .2s ease; }
-.planet-table-wrap:not(.is-wide) > .planet-table th { top:var(--header-offset,0px); }
-@media(prefers-reduced-motion:reduce) { .planet-table th { transition:none; } }
-.planet-table { width:100%; min-width:860px; border-collapse:collapse; font-size:13px; margin:0; color:var(--mesh-text); }
-.planet-table th { height:40px; padding:0 14px; background:var(--mesh-brand); color:white; font-weight:600; font-size:12px; white-space:nowrap; text-align:left; }
-.planet-table td { height:42px; padding:6px 14px; border-bottom:1px solid var(--mesh-border); vertical-align:middle; }
-.planet-table tbody tr { background:var(--mesh-surface); }
-.planet-table tbody tr:nth-child(even) { background:var(--mesh-stripe); }
-.planet-table tbody tr:hover { background:var(--mesh-hover); }
-.planet-table tbody tr:last-child td { border-bottom:0; }
-/* Sortable headings: the whole heading is the button, with an arrow for the
-   column the list is sorted by. */
-.planet-table th:has(.sort-button) { padding:0; }
-.sort-button { display:flex; align-items:center; gap:5px; width:100%; height:40px; padding:0 14px; border:0; background:none; color:inherit; font:inherit; white-space:nowrap; cursor:pointer; }
-.is-number > .sort-button { justify-content:flex-end; }
-.sort-button:hover { background:#ffffff14; }
-.sort-button:focus-visible { outline:2px solid white; outline-offset:-3px; }
-.sort-button::after { content:""; width:0; height:0; border:4px solid transparent; opacity:.35; border-top-color:currentColor; margin-top:4px; }
-th[aria-sort="ascending"] .sort-button::after { opacity:1; border-top-color:transparent; border-bottom-color:currentColor; margin-top:-4px; }
-th[aria-sort="descending"] .sort-button::after { opacity:1; }
-.planet-table .is-number { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.planet-table a { text-decoration:none; }
-.planet-table a:hover { text-decoration:underline; }
+.history-select { height:32px; font-size:13px; }
+
+/* The list's columns. */
+.planet-table a { color:var(--mesh-text); font-weight:500; }
 .planet-table .c-area { font-weight:600; }
-.planet-table .c-url { color:var(--mesh-muted); overflow-wrap:anywhere; }
+.planet-table .c-url a { color:var(--mesh-primary); font-weight:400; white-space:nowrap; }
 .planet-table .c-version { white-space:nowrap; }
 .planet-table .c-version small { color:var(--mesh-muted); }
+.planet-table .c-version .ti { color:var(--mesh-muted); }
 .planet-table tr.is-offline td:not(.c-status) { opacity:.6; }
-.planet-empty { padding:30px 16px; text-align:center; color:var(--mesh-muted); }
-.trend-up { color:var(--mesh-good); }
-.trend-down { color:var(--mesh-bad); }
+.trend-up { color:var(--mesh-live); }
+.trend-down { color:var(--mesh-danger); }
 .trend-flat { color:var(--mesh-muted); }
-.status-tag { display:inline-flex; align-items:center; gap:6px; height:22px; padding:0 9px; border-radius:11px; background:var(--mesh-soft); font-size:12px; font-weight:500; white-space:nowrap; }
-.status-tag::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--mesh-good); }
+/* An instance's state: a dot in its colour and its word. */
+.status-tag { display:inline-flex; align-items:center; gap:7px; height:24px; padding:0 9px; border:1px solid var(--mesh-border-strong); border-radius:6px; font-size:12px; font-weight:500; white-space:nowrap; }
+.status-tag::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--mesh-live); }
 .status-tag.is-failing::before { background:#d99a00; }
-.status-tag.is-offline { color:var(--mesh-bad); }
+.status-tag.is-offline { color:var(--mesh-danger); }
 .status-tag.is-offline::before { background:#dc3545; }
-.status-reason { display:block; margin-top:3px; max-width:280px; color:var(--mesh-muted); font-size:11px; overflow-wrap:anywhere; }
-.planet-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+.status-reason { display:block; max-width:280px; margin-top:3px; color:var(--mesh-muted); font-size:11.5px; overflow-wrap:anywhere; }
+.planet-list-note { display:flex; align-items:baseline; gap:6px; margin:0; padding:12px 16px; border-top:1px solid var(--mesh-border); color:var(--mesh-muted); font-size:13px; }
+
+/* Adding an instance, and how collection works, side by side. */
+/* Both as tall as the taller one. */
+.planet-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
+.planet-columns > .planet-panel { display:flex; flex-direction:column; margin-bottom:0; }
+.planet-columns > .planet-panel > .planet-panel-body { flex:1; }
 @media(max-width:1000px) { .planet-columns { grid-template-columns:minmax(0,1fr); } }
-.planet-form { display:grid; gap:12px; }
-.planet-form label { display:block; margin-bottom:4px; font-size:12px; font-weight:600; color:var(--mesh-muted); }
+.planet-form { display:grid; gap:14px; }
+.planet-form label { display:block; margin-bottom:6px; color:var(--mesh-muted); font-size:12.5px; font-weight:500; }
 .planet-form .mesh-input,.planet-form .mesh-select { width:100%; }
-.planet-form-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+.planet-form-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
 @media(max-width:560px) { .planet-form-row { grid-template-columns:minmax(0,1fr); } }
 .planet-form-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:12px; }
-.planet-form-hint { margin:0; color:var(--mesh-muted); font-size:12px; line-height:1.5; }
+.planet-form-hint { margin:0; color:var(--mesh-muted); font-size:12.5px; line-height:1.5; }
 #submit-status { margin:0; font-size:13px; line-height:1.5; }
 #submit-status:empty { display:none; }
-#submit-status.is-error { color:var(--mesh-bad); }
-#submit-status.is-done { color:var(--mesh-good); }
+#submit-status.is-error { color:var(--mesh-danger); }
+#submit-status.is-done { color:var(--mesh-live); }
 #submit-status small { display:block; color:var(--mesh-muted); overflow-wrap:anywhere; }
+.planet-howto ul { margin:0 0 12px; padding-left:20px; }
+.planet-howto li { margin-bottom:6px; }
+
 /* On phones, each instance is a card: area and address, version, then the
-   figures with their names, and the status last. */
+   figures with their names, and the state last. */
 @media(max-width:700px) {
     .planet-table { min-width:0; }
     .planet-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-    .planet-table, .planet-table tbody { display:block; }
-    .planet-table tbody { display:grid; gap:10px; padding:12px; }
-    .planet-table tbody tr, .planet-table tbody tr:nth-child(even), .planet-table tbody tr:hover { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:4px 12px; padding:12px 14px; background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:9px; }
-    .planet-table td { display:block; height:auto; padding:0; border:0; }
+    .planet-table,.planet-table tbody { display:block; }
+    .planet-table tbody { display:grid; gap:10px; padding:12px; background:var(--mesh-surface-2); }
+    .planet-table tbody tr,.planet-table tbody tr:hover { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:4px 12px; padding:12px 14px; background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:var(--mesh-radius); }
+    .planet-table td,.planet-table tbody tr:last-child td { display:block; height:auto; padding:0; border:0; }
     .planet-table td[colspan] { grid-column:1 / -1; }
     .planet-table :is(.c-area,.c-url,.c-version,.c-status) { grid-column:1 / -1; }
     .planet-table .c-status { margin-top:6px; }
-    .planet-table td[data-label] { text-align:left; font-size:12px; }
+    .planet-table .c-url a { white-space:normal; overflow-wrap:anywhere; }
+    .planet-table td[data-label] { font-size:12.5px; text-align:left; }
     .planet-table td[data-label]::before { content:attr(data-label) " "; color:var(--mesh-muted); }
 }
-.planet-list-note { margin:0; padding:12px 18px; border-top:1px solid var(--mesh-border); color:var(--mesh-muted); font-size:13px; }
-.planet-list-note .ti { margin-right:2px; }
-.planet-howto ul { padding-left:20px; margin:0 0 12px; }
-.planet-howto li { margin-bottom:6px; }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="mesh-heading">
-    <div class="mesh-heading-title">
+<div class="planet-heading">
+    <div class="planet-heading-title">
         <h1>{{ "Instances" | tr }}</h1>
         <p>{{ "The Meshview instances whose nodes are on the map." | tr }}</p>
     </div>
 </div>
 
-<div class="mesh-metrics">
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-router" aria-hidden="true"></span></span><span>{{ "Online" | tr }}</span><strong id="metric-online">—</strong><small>{{ "answering now" | tr }}</small></div>
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-help-circle" aria-hidden="true"></span></span><span>{{ "Offline" | tr }}</span><strong id="metric-offline">—</strong><small>{{ "silent for days" | tr }}</small></div>
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-access-point" aria-hidden="true"></span></span><span>{{ "Nodes" | tr }}</span><strong id="metric-nodes">—</strong><small>{{ "in the latest collections" | tr }}</small></div>
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-world" aria-hidden="true"></span></span><span>{{ "Countries" | tr }}</span><strong id="metric-countries">—</strong><small>{{ "with an instance" | tr }}</small></div>
+<div class="mesh-metrics planet-metrics">
+    <div class="mesh-metric"><div class="mesh-metric-in"><span class="mesh-metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2zM17 17v.01M13 17v.01M15 13v-2M11.75 8.75a4 4 0 0 1 6.5 0M8.5 6.5a8 8 0 0 1 13 0"/></svg></span><strong id="metric-online">—</strong><span class="mesh-metric-name">{{ "Online" | tr }}</span><small>{{ "answering now" | tr }}</small></div></div>
+    <div class="mesh-metric"><div class="mesh-metric-in"><span class="mesh-metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M12 16v.01M12 13a2 2 0 0 0 .914 -3.782a1.98 1.98 0 0 0 -2.414 .483"/></svg></span><strong id="metric-offline">—</strong><span class="mesh-metric-name">{{ "Offline" | tr }}</span><small>{{ "silent for days" | tr }}</small></div></div>
+    <div class="mesh-metric"><div class="mesh-metric-in"><span class="mesh-metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12l0 .01M14.828 9.172a4 4 0 0 1 0 5.656M17.657 6.343a8 8 0 0 1 0 11.314M9.168 14.828a4 4 0 0 1 0 -5.656M6.337 17.657a8 8 0 0 1 0 -11.314"/></svg></span><strong id="metric-nodes">—</strong><span class="mesh-metric-name">{{ "Nodes" | tr }}</span><small>{{ "in the latest collections" | tr }}</small></div></div>
+    <div class="mesh-metric"><div class="mesh-metric-in"><span class="mesh-metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></svg></span><strong id="metric-countries">—</strong><span class="mesh-metric-name">{{ "Countries" | tr }}</span><small>{{ "with an instance" | tr }}</small></div></div>
 </div>
 
-<section class="mesh-panel" aria-labelledby="history-title">
-    <div class="mesh-panel-title">
+<section class="planet-panel" aria-labelledby="history-title">
+    <div class="planet-panel-title">
         <h2 id="history-title">{{ "Nodes per day" | tr }}</h2>
-        <select id="history-days" class="mesh-select" aria-label="{{ "Period" | tr }}">
+        <select id="history-days" class="mesh-select history-select" aria-label="{{ "Period" | tr }}">
             <option value="7">{{ "Last week" | tr }}</option>
             <option value="30" selected>{{ "Last month" | tr }}</option>
             <option value="90">{{ "Last three months" | tr }}</option>
@@ -142,10 +122,10 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
     </div>
 </section>
 
-<section class="mesh-panel" aria-labelledby="list-title">
-    <div class="mesh-panel-title">
+<section class="planet-panel" aria-labelledby="list-title">
+    <div class="planet-panel-title">
         <h2 id="list-title">{{ "All instances" | tr }}</h2>
-        <span id="list-count" class="mesh-count">—</span>
+        <span id="list-count" class="planet-count">—</span>
     </div>
     <div class="planet-table-wrap">
         <table class="planet-table">
@@ -166,13 +146,13 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
             </tbody>
         </table>
     </div>
-    <p class="planet-list-note"><span class="ti ti-info-circle" aria-hidden="true"></span> {{ "Is something wrong on the list, or do you want your instance taken off it?" | tr }} <a href="https://github.com/meshview/planet/issues/new" target="_blank" rel="noopener">{{ "Open an issue on GitHub." | tr }}</a></p>
+    <p class="planet-list-note"><span class="ti ti-info-circle" aria-hidden="true"></span><span>{{ "Is something wrong on the list, or do you want your instance taken off it?" | tr }} <a href="https://github.com/meshview/planet/issues/new" target="_blank" rel="noopener">{{ "Open an issue on GitHub." | tr }}</a></span></p>
 </section>
 
 <div class="planet-columns">
-    <section class="mesh-panel" aria-labelledby="add-title">
-        <div class="mesh-panel-title"><h2 id="add-title">{{ "Add your instance" | tr }}</h2></div>
-        <div class="mesh-panel-body">
+    <section class="planet-panel" aria-labelledby="add-title">
+        <div class="planet-panel-title"><h2 id="add-title">{{ "Add your instance" | tr }}</h2></div>
+        <div class="planet-panel-body">
         {% if submissions %}
             <form id="submit-form" class="planet-form" novalidate>
                 <div>
@@ -195,7 +175,7 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
                 </div>
                 <p class="planet-form-hint">{{ "It is added at once if it answers as a Meshview does: this site asks for its version and its nodes right away. The area is chosen from the list, so that only real places are shown." | tr }}</p>
                 <div class="planet-form-actions">
-                    <button id="submit-button" class="mesh-button" type="submit"><span class="ti ti-plug" aria-hidden="true"></span> {{ "Add instance" | tr }}</button>
+                    <button id="submit-button" class="mesh-button is-primary" type="submit"><span class="ti ti-plug" aria-hidden="true"></span> {{ "Add instance" | tr }}</button>
                 </div>
                 <p id="submit-status" role="status" aria-live="polite"></p>
             </form>
@@ -205,16 +185,16 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
         </div>
     </section>
 
-    <section class="mesh-panel planet-howto" aria-labelledby="howto-title">
-        <div class="mesh-panel-title"><h2 id="howto-title">{{ "How collection works" | tr }}</h2></div>
-        <div class="mesh-panel-body">
+    <section class="planet-panel planet-howto" aria-labelledby="howto-title">
+        <div class="planet-panel-title"><h2 id="howto-title">{{ "How collection works" | tr }}</h2></div>
+        <div class="planet-panel-body">
             <ul>
                 <li>{% if collect_hours == "1" %}{{ "Every hour this site asks each instance for its version and for the nodes it heard in the latest {days} days." | tr | replace(from="{days}", to=days_active) }}{% else %}{{ "Every {hours} hours this site asks each instance for its version and for the nodes it heard in the latest {days} days." | tr | replace(from="{hours}", to=collect_hours) | replace(from="{days}", to=days_active) }}{% endif %}</li>
                 <li>{{ "Only nodes with a position go on the map; the rest are counted." | tr }}</li>
                 <li>{{ "An instance that does not answer keeps what it had. After {days} days without answering it goes offline: last on the list and off the map, until it answers again." | tr | replace(from="{days}", to=offline_days) }}</li>
                 <li>{{ "An instance offline for {days} days is removed, with its history." | tr | replace(from="{days}", to=delete_days) }}</li>
             </ul>
-            <p>{{ "Meshview 3.0 and later answer as this site needs. If yours sits behind a bot check, let /version and /api/nodes through." | tr }}</p>
+            <p>{{ "The Python Meshview from 3.0 on, and any version of Meshview Rust, answer as this site needs. If yours sits behind a bot check, let /version and /api/nodes through." | tr }}</p>
         </div>
     </section>
 </div>

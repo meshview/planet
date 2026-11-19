@@ -1,21 +1,21 @@
 <!doctype html>
-<html lang="{{ ui_language }}" data-bs-theme="light">
+<html lang="{{ ui_language }}" data-theme="light" data-accent="blue" data-map-theme="light">
 <head>
-    <title>{% block title %}Meshview Planet{% endblock %}</title>
+    <title>{% block title %}Meshview Rust Planet{% endblock %}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% if page == "instances" %}
-    {% set preview_title = ("Instances" | tr) ~ " · Meshview Planet" %}
+    {% set preview_title = ("Instances" | tr) ~ " · Meshview Rust Planet" %}
     {% set description = "The Meshview instances on the map: the nodes each one sees, day by day, and how to add yours." | tr %}
     {% else %}
-    {% set preview_title = "Meshview Planet" %}
+    {% set preview_title = "Meshview Rust Planet" %}
     {% set description = "The nodes every Meshview instance sees, on one map of the world." | tr %}
     {% endif %}
     <meta name="description" content="{{ description }}">
 
     <!-- Link previews, for the apps that show a card when a link is shared. -->
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Meshview Planet">
+    <meta property="og:site_name" content="Meshview Rust Planet">
     <meta property="og:title" content="{{ preview_title }}">
     <meta property="og:description" content="{{ description }}">
     <meta property="og:locale" content="{% if ui_language == "es" %}es_ES{% else %}en_US{% endif %}">
@@ -23,173 +23,47 @@
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Meshview Planet">
+    <meta property="og:image:alt" content="Meshview Rust Planet">
     <meta name="twitter:card" content="summary_large_image">
 
-    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48 64x64 256x256" href="/static/favicon.ico">
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="/static/favicon.ico">
     <link rel="icon" type="image/svg+xml" sizes="any" href="/static/meshview-icon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 
+    <script src="/static/theme.js"></script>
     <script>
         window.meshTranslations = {{ ui_translations | tojson }};
         window.meshLanguage = {{ ui_language | tojson }};
     </script>
     <script src="/static/i18n.js"></script>
-    <script src="/static/theme.js"></script>
-    <link href="/static/vendor/bootstrap-5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/vendor/inter-5.3.0/wght.css">
-    <link rel="stylesheet" href="/static/vendor/inter-5.3.0/wght-italic.css">
-    <link rel="stylesheet" href="/static/icons.css">
     {% block head %}{% endblock %}
-    <style>
-:root,[data-bs-theme="light"],[data-bs-theme="dark"] {
-    --bs-body-font-family:"Inter Variable",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    --bs-primary:var(--mesh-brand);
-    --bs-primary-rgb:var(--mesh-primary-rgb);
-    --bs-link-color:var(--mesh-primary);
-    --bs-link-color-rgb:var(--mesh-primary-rgb);
-    --bs-link-hover-color:var(--mesh-primary-dark);
-    --bs-link-hover-color-rgb:25,70,127;
-    --bs-focus-ring-color:rgba(var(--mesh-primary-rgb),.25);
-}
-[data-bs-theme="dark"] { --bs-link-color:#8bbcff; --bs-link-color-rgb:139,188,255; --bs-link-hover-color:#b6d5ff; --bs-link-hover-color-rgb:182,213,255; }
-[data-bs-theme="light"] body { background:var(--mesh-page); color:var(--mesh-text); }
-input[type="checkbox"],input[type="radio"] { accent-color:var(--mesh-primary); }
-.leaflet-popup-content a,.leaflet-control-attribution a { color:var(--mesh-primary); }
-body { min-height:100dvh; display:flex; flex-direction:column; }
-/* Sticky header that hides while scrolling down and returns on the way up. */
-.mesh-header { position:sticky; top:0; z-index:1100; background:var(--mesh-brand); color:white; box-shadow:0 2px 8px #193d6918; transition:transform .2s ease; }
-.mesh-header.is-hidden { transform:translateY(-100%); }
-@media(prefers-reduced-motion:reduce) { .mesh-header { transition:none; } }
-.mesh-header-inner { max-width:1600px; margin:auto; padding:0 20px; min-height:48px; display:flex; align-items:center; gap:20px; }
-.mesh-brand { display:flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:white; text-decoration:none; flex-shrink:0; }
-.mesh-brand:hover { color:white; }
-.mesh-brand-icon { width:28px; height:28px; display:block; flex-shrink:0; }
-#site-menu { display:flex; align-items:center; gap:4px; flex:1 1 auto; min-width:0; }
-#site-menu a { color:#e6effb; text-decoration:none; padding:6px 10px; border-radius:6px; font-size:14px; line-height:20px; white-space:nowrap; }
-#site-menu a:hover { color:white; background:#ffffff14; }
-#site-menu a.active { color:white; background:#ffffff2e; font-weight:500; }
-#site-menu a:focus-visible { outline:2px solid white; outline-offset:2px; }
-.mesh-nav-external { margin-left:4px; font-size:12px; opacity:.75; }
-.mesh-header-tools { display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
-.mesh-languages { display:inline-flex; border:1px solid #ffffff70; border-radius:6px; overflow:hidden; }
-.mesh-languages a { padding:6px 9px; color:#e6effb; font-size:12px; font-weight:600; line-height:20px; text-decoration:none; }
-.mesh-languages a:hover { color:white; background:#ffffff14; }
-.mesh-languages a[aria-current] { color:white; background:#ffffff2e; }
-.mesh-languages a:focus-visible { outline:2px solid white; outline-offset:-2px; }
-.mesh-menu-toggle { display:none; align-items:center; justify-content:center; color:white; background:none; border:1px solid #ffffff70; border-radius:6px; width:36px; height:36px; padding:0; font-size:20px; line-height:1; }
-.mesh-menu-toggle:hover { background:#ffffff20; }
-.mesh-menu-toggle:focus-visible { outline:2px solid white; outline-offset:3px; }
-.mesh-content { flex:1 0 auto; width:100%; max-width:1600px; margin:0 auto; padding:16px 28px; box-sizing:border-box; }
-.mesh-footer { display:flex; justify-content:space-between; gap:16px; padding:20px 28px; border-top:1px solid var(--mesh-border); color:var(--mesh-muted); font-size:12px; }
-.mesh-footer-project { display:inline-flex; align-items:center; gap:6px; margin-left:auto; white-space:nowrap; }
-.mesh-footer-github, .mesh-footer-about { display:inline-flex; color:var(--mesh-muted); text-decoration:none; }
-.mesh-footer-about { padding:0; border:0; background:none; font:inherit; cursor:pointer; }
-.mesh-footer-github:hover, .mesh-footer-about:hover { color:var(--mesh-primary); }
-.mesh-footer-github .ti { font-size:15px; }
-.mesh-footer-github:focus-visible, .mesh-footer-about:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:2px; border-radius:4px; }
-@media(max-width:700px) { .mesh-footer { flex-direction:column; align-items:center; text-align:center; } .mesh-footer-project { margin-left:0; } }
-.mesh-dialog { width:min(640px, calc(100vw - 32px)); max-height:min(80vh, 720px); padding:0; border:1px solid var(--mesh-border); border-radius:12px; background:var(--mesh-surface); color:var(--mesh-text); box-shadow:0 20px 48px rgba(16,25,37,.3); }
-.mesh-dialog::backdrop { background:rgba(16,25,37,.45); }
-.mesh-dialog[open] { display:flex; flex-direction:column; }
-.mesh-dialog-close { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--mesh-muted); font-size:18px; cursor:pointer; }
-.mesh-dialog-close:hover { background:var(--mesh-soft); color:var(--mesh-text); }
-.mesh-about { width:min(480px, calc(100vw - 32px)); }
-.mesh-about .mesh-dialog-close { position:absolute; top:10px; right:10px; }
-.mesh-about-body { overflow:auto; padding:28px 28px 24px; text-align:center; font-size:14px; line-height:1.55; }
-.mesh-about-body > img { display:block; margin:0 auto 10px; }
-.mesh-about-body h2 { margin:0; font-size:22px; font-weight:650; }
-.mesh-about-body p { margin:0 0 14px; }
-.mesh-about-body .mesh-about-version { margin-bottom:16px; color:var(--mesh-muted); font-size:13px; }
-.mesh-about-links { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin:0 0 18px; }
-.mesh-about-links a { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:8px 10px; border:1px solid var(--mesh-border); border-radius:6px; color:var(--mesh-text); text-decoration:none; font-weight:500; white-space:nowrap; }
-.mesh-about-links a:hover { background:var(--mesh-soft); color:var(--mesh-text); }
-.mesh-about-links .ti { color:var(--mesh-primary); }
-.mesh-about-body .mesh-about-small { margin-bottom:6px; color:var(--mesh-muted); font-size:12.5px; text-wrap:balance; }
-.mesh-about-small a { color:var(--mesh-muted); text-decoration:none; }
-.mesh-about-small a:hover { color:var(--mesh-primary); text-decoration:underline; }
-.mesh-about-heart { color:#d93848; }
-.mesh-about-name { white-space:nowrap; }
-.mesh-about-flag { display:inline; height:.95em; width:auto; vertical-align:-.12em; border-radius:1.5px; }
-@media(max-width:420px) { .mesh-about-links { grid-template-columns:1fr; } }
-/* Page heading: title, context and actions on one line. */
-.mesh-heading { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:8px 14px; min-height:40px; margin-bottom:12px; }
-.mesh-heading h1 { font-size:22px; font-weight:650; line-height:1.2; margin:0; }
-.mesh-heading-title { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; min-width:0; }
-.mesh-heading p { margin:0; color:var(--mesh-muted); font-size:13px; }
-.mesh-heading-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.mesh-heading-actions label { margin:0; font-size:12px; color:var(--mesh-muted); }
-/* Shared controls. */
-.mesh-select,.mesh-input { min-width:0; max-width:100%; padding:7px 10px; border:1px solid var(--mesh-border); border-radius:6px; background:var(--mesh-surface); color:var(--mesh-text); font-size:13px; }
-.mesh-select:focus-visible,.mesh-input:focus-visible,.mesh-button:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:2px; }
-.mesh-button { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 14px; border:1px solid var(--mesh-brand); border-radius:6px; background:var(--mesh-brand); color:white; font-size:13px; font-weight:500; cursor:pointer; }
-.mesh-button:hover { background:var(--mesh-brand-deep); border-color:var(--mesh-brand-deep); }
-.mesh-button:disabled { opacity:.6; cursor:default; }
-/* Figures above the content. */
-.mesh-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin-bottom:12px; }
-@media(max-width:1199px) { .mesh-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-.mesh-metric { display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:14px; row-gap:1px; align-items:center; align-content:start; padding:14px 18px; background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:9px; box-shadow:0 2px 4px #24324704; }
-.mesh-metric > :not(.mesh-metric-icon) { grid-column:2; min-width:0; }
-.mesh-metric-icon { grid-row:1 / span 3; display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:10px; background:var(--mesh-soft); color:var(--mesh-primary); font-size:20px; }
-.mesh-metric > span:not(.mesh-metric-icon) { font-size:12px; font-weight:500; color:var(--mesh-muted); }
-.mesh-metric strong { font-size:24px; line-height:1.25; font-weight:650; color:var(--mesh-primary); font-variant-numeric:tabular-nums; }
-.mesh-metric small { font-size:11px; color:var(--mesh-muted); }
-/* Panels. */
-.mesh-panel { background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:9px; overflow:hidden; min-width:0; margin-bottom:12px; }
-.mesh-panel-title { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--mesh-border); gap:8px; min-height:56px; }
-.mesh-panel-title h2 { font-size:15px; font-weight:650; margin:0; }
-.mesh-panel-body { padding:16px 18px; font-size:14px; line-height:1.6; }
-.mesh-panel-body p:last-child { margin-bottom:0; }
-.mesh-count { color:var(--mesh-primary); background:var(--mesh-soft); padding:3px 8px; border-radius:5px; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
-/* Loading spinner: .is-loading on placeholder text. */
-@keyframes mesh-spin { to { transform:rotate(360deg); } }
-.is-loading::before { content:""; display:inline-block; flex-shrink:0; width:.95em; height:.95em; margin-right:.5em; vertical-align:-.15em; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; opacity:.8; animation:mesh-spin .8s linear infinite; }
-@media(prefers-reduced-motion:reduce) { .is-loading::before { animation-duration:2.4s; } }
-@media(max-width:860px) {
-    .mesh-header-inner { gap:8px; padding:0 12px 0 16px; min-height:52px; }
-    .mesh-brand { min-width:0; flex:1 1 auto; }
-    .mesh-menu-toggle { display:inline-flex; order:3; }
-    .mesh-header-tools { margin-left:0; }
-    /* The menu opens as a panel under the header. */
-    #site-menu { display:none; position:absolute; top:100%; left:0; right:0; flex-direction:column; align-items:stretch; gap:0; padding:4px 0 10px; background:var(--mesh-surface); border-bottom:1px solid var(--mesh-border); box-shadow:0 12px 24px rgba(16,25,37,.25); }
-    #site-menu.is-open { display:flex; }
-    #site-menu a { display:flex; align-items:center; justify-content:space-between; min-height:48px; padding:0 20px; border-radius:0; color:var(--mesh-text); font-size:15px; }
-    #site-menu a:hover { color:var(--mesh-text); background:var(--mesh-soft); }
-    #site-menu a.active { color:var(--mesh-primary); background:var(--mesh-soft); font-weight:600; box-shadow:inset 3px 0 0 var(--mesh-primary); }
-    #site-menu a:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:-2px; }
-}
-@media(max-width:700px) {
-    .mesh-content { padding:16px 14px; }
-    .mesh-metrics { gap:10px; }
-    .mesh-metric { padding:12px 14px; column-gap:8px; }
-    .mesh-metric > :not(.mesh-metric-icon) { grid-column:1 / -1; }
-    .mesh-metric > span:not(.mesh-metric-icon) { grid-column:2; grid-row:1; }
-    .mesh-metric-icon { grid-row:1; width:24px; height:24px; border-radius:6px; font-size:15px; }
-    .mesh-metric strong { font-size:22px; }
-}
-    </style>
-{% include "theme-styles.html" %}
+    <link rel="stylesheet" href="/static/meshview.css">
+    <link rel="stylesheet" href="/static/planet.css">
+    <link rel="stylesheet" href="/static/icons.css">
     {% block css %}{% endblock %}
 </head>
 
-<body>
+<body class="{% block body_class %}{% endblock %}">
 <header class="mesh-header">
     <div class="mesh-header-inner">
-        <a class="mesh-brand" href="/"><img class="mesh-brand-icon" src="/static/meshview-icon.svg" width="28" height="28" alt=""> <span>Meshview Planet</span></a>
-        <button class="mesh-menu-toggle" type="button" aria-label="{{ "Toggle navigation" | tr }}" aria-expanded="false" aria-controls="site-menu"><span class="ti ti-menu-2" aria-hidden="true"></span></button>
+        <a class="mesh-brand" href="/">
+            {% include "logo.html" %}
+            <span class="mesh-brand-text"><span class="mesh-brand-title">Meshview Rust Planet</span></span>
+        </a>
         <nav id="site-menu" aria-label="{{ "Main navigation" | tr }}">
-            <a href="/"{% if page == "map" %} class="active" aria-current="page"{% endif %}>{{ "Map" | tr }}</a>
-            <a href="/instances"{% if page == "instances" %} class="active" aria-current="page"{% endif %}>{{ "Instances" | tr }}</a>
-            <a href="/api/docs" target="_blank" rel="noopener">API<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
-            <a href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener">Meshview<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
+            <div class="mesh-nav-items">
+                <span class="mesh-nav-section">{{ "Explore" | tr }}</span>
+                <a href="/"{% if page == "map" %} class="active" aria-current="page"{% endif %}><svg class="mesh-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13M9 4v13M15 7v13"/></svg>{{ "Map" | tr }}</a>
+                <a href="/instances"{% if page == "instances" %} class="active" aria-current="page"{% endif %}><svg class="mesh-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2zM17 17v.01M13 17v.01M15 13v-2M11.75 8.75a4 4 0 0 1 6.5 0M8.5 6.5a8 8 0 0 1 13 0"/></svg>{{ "Instances" | tr }}</a>
+                <span class="mesh-nav-section">{{ "Links" | tr }}</span>
+                <a href="/api/docs" target="_blank" rel="noopener"><svg class="mesh-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8l-4 4l4 4M17 8l4 4l-4 4M14 4l-4 16"/></svg>API<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
+                <a href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener"><svg class="mesh-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></svg>Meshview<span class="mesh-nav-external" aria-hidden="true">↗</span></a>
+            </div>
         </nav>
-        {% block header_extra %}{% endblock %}
-        <div class="mesh-header-tools">
-            <nav class="mesh-languages" aria-label="{{ "Language" | tr }}">
-                <a href="?lang=en" hreflang="en" lang="en" title="English"{% if ui_language == "en" %} aria-current="true"{% endif %}>EN</a>
-                <a href="?lang=es" hreflang="es" lang="es" title="Español"{% if ui_language == "es" %} aria-current="true"{% endif %}>ES</a>
-            </nav>
-            <button class="mesh-theme-toggle" type="button" data-theme-toggle aria-label="{{ "Switch to night mode" | tr }}" aria-pressed="false" title="{{ "Night mode" | tr }}"><svg class="theme-icon theme-icon--sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><svg class="theme-icon theme-icon--moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg></button>
+        <div class="mesh-header-actions">
+            <button type="button" class="mesh-icon-button" id="prefs-open" aria-haspopup="dialog" aria-controls="mesh-prefs" aria-label="{{ "Preferences" | tr }}" title="{{ "Preferences" | tr }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></button>
+            <button type="button" class="mesh-icon-button mesh-menu-toggle" aria-label="{{ "Toggle navigation" | tr }}" aria-expanded="false" aria-controls="site-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="when-closed" d="M4 6h16M4 12h16M4 18h16"/><path class="when-open" d="M18 6L6 18M6 6l12 12" hidden/></svg></button>
         </div>
     </div>
 </header>
@@ -197,45 +71,145 @@ body { min-height:100dvh; display:flex; flex-direction:column; }
 {% block body %}{% endblock %}
 </main>
 <footer class="mesh-footer">
-    <span>{{ "The nodes every Meshview instance sees, on one map of the world." | tr }}</span>
-    <span class="mesh-footer-project">
-        <a class="mesh-footer-github" href="https://github.com/meshview/planet" target="_blank" rel="noopener" title="{{ "Meshview Planet on GitHub" | tr }}" aria-label="{{ "Meshview Planet on GitHub" | tr }}"><span class="ti ti-brand-github" aria-hidden="true"></span></a>
-        <button type="button" id="site-version" class="mesh-footer-about" aria-haspopup="dialog" aria-controls="mesh-about" title="{{ "About Meshview Planet" | tr }}">Meshview Planet {{ build_version }}{% if build_revision %} ({{ build_revision }}){% endif %}</button>
-    </span>
+    <div class="mesh-footer-inner">
+        <span class="mesh-footer-tagline">{{ "The nodes every Meshview instance sees, on one map of the world." | tr }}</span>
+        <span id="footer-attribution" class="mesh-footer-attribution"></span>
+        <span class="mesh-footer-project">
+            <a href="https://github.com/meshview/planet" target="_blank" rel="noopener" title="{{ "Meshview Rust Planet on GitHub" | tr }}" aria-label="{{ "Meshview Rust Planet on GitHub" | tr }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5"/></svg>GitHub</a>
+            <button type="button" id="site-version" class="mesh-footer-about" aria-haspopup="dialog" aria-controls="mesh-about" title="{{ "About Meshview Rust Planet" | tr }}">Meshview Rust Planet {{ build_version }}{% if build_revision %} ({{ build_revision }}){% endif %}</button>
+        </span>
+    </div>
 </footer>
+
 <dialog id="mesh-about" class="mesh-dialog mesh-about" aria-labelledby="mesh-about-title">
-    <button type="button" class="mesh-dialog-close" aria-label="{{ "Close" | tr }}" title="{{ "Close" | tr }}"><span class="ti ti-x" aria-hidden="true"></span></button>
+    <button type="button" class="mesh-dialog-close" aria-label="{{ "Close" | tr }}" title="{{ "Close" | tr }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     <div class="mesh-about-body">
-        <img src="/static/meshview-icon.svg" width="72" height="72" alt="">
-        <h2 id="mesh-about-title">Meshview Planet</h2>
+        {% include "logo.html" %}
+        <h2 id="mesh-about-title">Meshview Rust Planet</h2>
         <p class="mesh-about-version">{{ build_version }}{% if build_revision %} ({{ build_revision }}){% endif %}</p>
-        <p>{{ "Meshview Planet gathers the nodes every Meshview instance sees into one map of the world, and keeps the list of those instances." | tr }}</p>
-        <nav class="mesh-about-links" aria-label="{{ "About Meshview Planet" | tr }}">
-            <a href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener"><span class="ti ti-world-www" aria-hidden="true"></span> Meshview</a>
-            <a href="https://github.com/meshview/planet" target="_blank" rel="noopener"><span class="ti ti-brand-github" aria-hidden="true"></span> GitHub</a>
-            <a href="https://github.com/meshview/planet/issues" target="_blank" rel="noopener"><span class="ti ti-bug" aria-hidden="true"></span> {{ "Report a problem" | tr }}</a>
-            <a href="/api/docs" target="_blank" rel="noopener"><span class="ti ti-plug" aria-hidden="true"></span> API</a>
+        <p>{{ "Meshview Rust Planet gathers the nodes every Meshview instance sees into one map of the world, and keeps the list of those instances." | tr }}</p>
+        <nav class="mesh-about-links" aria-label="{{ "About Meshview Rust Planet" | tr }}">
+            <a class="mesh-button" href="https://meshview.github.io/{% if ui_language == "es" %}es/{% endif %}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></svg>Meshview</a>
+            <a class="mesh-button" href="https://github.com/meshview/planet" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5"/></svg>GitHub</a>
+            <a class="mesh-button" href="https://github.com/meshview/planet/issues" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9v-1a3 3 0 0 1 6 0v1M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3M3 13l4 0M17 13l4 0M12 20l0 -6M4 19l3.35 -2M20 19l-3.35 -2M4 7l3.75 2.4M20 7l-3.75 2.4"/></svg>{{ "Report a problem" | tr }}</a>
+            <a class="mesh-button" href="/api/docs" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8l-4 4l4 4M17 8l4 4l-4 4M14 4l-4 16"/></svg>API</a>
         </nav>
         <p class="mesh-about-small"><a href="https://github.com/meshview/planet/blob/master/LICENSE" target="_blank" rel="noopener">{{ "Free software under the AGPL, version 3 or later" | tr }}</a></p>
         <p class="mesh-about-small">{{ "Made with" | tr }} <span class="mesh-about-heart" role="img" aria-label="{{ "love" | tr }}">♥</span> {{ "in Galicia, Spain, Europe" | tr }} <img class="mesh-about-flag" src="/static/flag-eu.svg" width="21" height="14" alt=""> {{ "by" | tr }} <span class="mesh-about-name">Óscar García Amor</span></p>
     </div>
 </dialog>
 
+<dialog id="mesh-prefs" class="mesh-dialog mesh-prefs" aria-labelledby="mesh-prefs-title">
+    <div class="mesh-dialog-header">
+        <h2 id="mesh-prefs-title">{{ "Preferences" | tr }}</h2>
+        <button type="button" class="mesh-dialog-close" aria-label="{{ "Close" | tr }}" title="{{ "Close" | tr }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <form class="mesh-dialog-body" method="dialog">
+        <fieldset>
+            <legend>{{ "Theme" | tr }}</legend>
+            <div class="mesh-segmented" style="--n:3">
+                <label><input type="radio" name="theme" value="auto">{{ "Automatic" | tr }}</label>
+                <label><input type="radio" name="theme" value="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/></svg>{{ "Light" | tr }}</label>
+                <label><input type="radio" name="theme" value="dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/></svg>{{ "Dark" | tr }}</label>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>{{ "Map theme" | tr }}</legend>
+            <div class="mesh-segmented" style="--n:3">
+                <label><input type="radio" name="mapTheme" value="page">{{ "As the page" | tr }}</label>
+                <label><input type="radio" name="mapTheme" value="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/></svg>{{ "Light" | tr }}</label>
+                <label><input type="radio" name="mapTheme" value="dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/></svg>{{ "Dark" | tr }}</label>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>{{ "Colour" | tr }}</legend>
+            <div class="mesh-segmented mesh-swatches" style="--n:6">
+                <label title="{{ "Blue" | tr }}"><input type="radio" name="accent" value="blue"><span class="mesh-swatch" style="--swatch:#245ea8;--swatch-dark:#8bbcff"></span><span class="visually-hidden">{{ "Blue" | tr }}</span></label>
+                <label title="{{ "Green" | tr }}"><input type="radio" name="accent" value="green"><span class="mesh-swatch" style="--swatch:#0b7a52;--swatch-dark:#4cc38a"></span><span class="visually-hidden">{{ "Green" | tr }}</span></label>
+                <label title="{{ "Amber" | tr }}"><input type="radio" name="accent" value="amber"><span class="mesh-swatch" style="--swatch:#875c00;--swatch-dark:#ecb54e"></span><span class="visually-hidden">{{ "Amber" | tr }}</span></label>
+                <label title="{{ "Tile" | tr }}"><input type="radio" name="accent" value="tile"><span class="mesh-swatch" style="--swatch:#a14a2c;--swatch-dark:#f0a385"></span><span class="visually-hidden">{{ "Tile" | tr }}</span></label>
+                <label title="{{ "Violet" | tr }}"><input type="radio" name="accent" value="violet"><span class="mesh-swatch" style="--swatch:#6247aa;--swatch-dark:#b6a4f2"></span><span class="visually-hidden">{{ "Violet" | tr }}</span></label>
+                <label title="{{ "Graphite" | tr }}"><input type="radio" name="accent" value="graphite"><span class="mesh-swatch" style="--swatch:#3e4c5e;--swatch-dark:#b9c6d6"></span><span class="visually-hidden">{{ "Graphite" | tr }}</span></label>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend><label for="prefs-language">{{ "Language" | tr }}</label></legend>
+            <select class="mesh-select" id="prefs-language" name="language">
+                <option value="">{{ "The browser's" | tr }}</option>
+                <option value="en" lang="en">English</option>
+                <option value="es" lang="es">Español</option>
+            </select>
+        </fieldset>
+        <p class="mesh-prefs-note">{{ "Kept in this browser only." | tr }}</p>
+    </form>
+</dialog>
+
 <script>
-// The about dialog, opened from the version in the footer.
-(() => {
-    const dialog = document.getElementById("mesh-about");
-    document.getElementById("site-version").addEventListener("click", () => dialog.showModal());
+// Dialogs: the about one, opened from the version in the footer, and the
+// preferences, from the gear. A click on the backdrop lands on the dialog itself.
+function meshDialog(dialog, opener) {
+    opener.addEventListener("click", () => dialog.showModal());
     dialog.querySelector(".mesh-dialog-close").addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+}
+meshDialog(document.getElementById("mesh-about"), document.getElementById("site-version"));
+
+// Preferences: theme, map theme and colour apply at once; a language reloads
+// the page in it. A chosen language is the server's cookie, which ?lang= sets.
+(() => {
+    const dialog = document.getElementById("mesh-prefs");
+    meshDialog(dialog, document.getElementById("prefs-open"));
+    const form = dialog.querySelector("form");
+    const chosenLanguage = (document.cookie.match(/(?:^|;\s*)lang=([^;]*)/) || [])[1] || "";
+    dialog.addEventListener("toggle", () => {
+        if (!dialog.open) return;
+        form.theme.value = MeshPrefs.theme;
+        form.mapTheme.value = MeshPrefs.mapTheme;
+        form.accent.value = MeshPrefs.accent;
+        form.language.value = chosenLanguage;
+    });
+    form.addEventListener("change", event => {
+        const field = event.target;
+        if (field.name === "theme") MeshPrefs.theme = field.value;
+        if (field.name === "mapTheme") MeshPrefs.mapTheme = field.value;
+        if (field.name === "accent") MeshPrefs.accent = field.value;
+        if (field.name === "language") {
+            const url = new URL(location.href);
+            if (field.value) {
+                url.searchParams.set("lang", field.value);
+            } else {
+                document.cookie = "lang=; path=/; max-age=0; samesite=lax";
+                url.searchParams.delete("lang");
+            }
+            location.assign(url);
+        }
+    });
 })();
 
-// The language links keep the rest of the address.
-document.querySelectorAll(".mesh-languages a").forEach(link => {
-    const url = new URL(location.href);
-    url.searchParams.set("lang", link.hreflang);
-    link.href = url.pathname + url.search + url.hash;
-});
+// The menu, as a panel under the header on narrow screens.
+(() => {
+    const MOBILE = window.matchMedia("(max-width:860px)");
+    const menu = document.getElementById("site-menu");
+    const toggle = document.querySelector(".mesh-menu-toggle");
+    const setPanel = open => {
+        toggle.setAttribute("aria-expanded", String(open));
+        menu.classList.toggle("is-open", open);
+        toggle.querySelector(".when-closed").toggleAttribute("hidden", open);
+        toggle.querySelector(".when-open").toggleAttribute("hidden", !open);
+    };
+    toggle.addEventListener("click", () => {
+        const open = toggle.getAttribute("aria-expanded") !== "true";
+        setPanel(open);
+        if (open) menu.querySelector("a")?.focus();
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && menu.classList.contains("is-open")) { setPanel(false); toggle.focus(); }
+    });
+    document.addEventListener("click", event => {
+        if (menu.classList.contains("is-open") && !menu.contains(event.target) && !toggle.contains(event.target)) setPanel(false);
+    });
+    MOBILE.addEventListener("change", () => setPanel(false));
+})();
 
 // Header: hide while scrolling down, show again when scrolling up. How much
 // of it shows is --header-offset, for what sticks below it, as the headings of
@@ -268,33 +242,6 @@ document.querySelectorAll(".mesh-languages a").forEach(link => {
     window.addEventListener("resize", update);
     header.addEventListener("focusin", () => setHidden(false));
     setHidden(false);
-})();
-
-// The menu, as a panel on narrow screens.
-(() => {
-    const toggle = document.querySelector(".mesh-menu-toggle");
-    const menu = document.getElementById("site-menu");
-    const icon = toggle.querySelector(".ti");
-    const setOpen = open => {
-        toggle.setAttribute("aria-expanded", String(open));
-        menu.classList.toggle("is-open", open);
-        icon.classList.toggle("ti-menu-2", !open);
-        icon.classList.toggle("ti-x", open);
-    };
-    toggle.addEventListener("click", () => {
-        const open = toggle.getAttribute("aria-expanded") !== "true";
-        setOpen(open);
-        if (open) menu.querySelector("a")?.focus();
-    });
-    document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && menu.classList.contains("is-open")) {
-            setOpen(false);
-            toggle.focus();
-        }
-    });
-    document.addEventListener("click", event => {
-        if (menu.classList.contains("is-open") && !menu.contains(event.target) && !toggle.contains(event.target)) setOpen(false);
-    });
 })();
 
 // Numbers and moments in the page's language.

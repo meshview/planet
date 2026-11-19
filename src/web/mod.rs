@@ -40,7 +40,7 @@ const OPENAPI_PATH: &str = "/api/openapi.json";
 const SCALAR_HTML: &str = r#"<!doctype html>
 <html lang="$locale">
   <head>
-    <title>Meshview Planet API</title>
+    <title>Meshview Rust Planet API</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
@@ -55,7 +55,7 @@ const SCALAR_HTML: &str = r#"<!doctype html>
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "Meshview Planet",
+        title = "Meshview Rust Planet",
         description = include_str!("../../assets/api/intro.md"),
         license(name = "AGPL-3.0-or-later", identifier = "AGPL-3.0-or-later"),
     ),

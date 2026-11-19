@@ -1,6 +1,6 @@
-# Meshview Planet's configuration, with every key at its default. Any of them
-# can also be set from the environment as MESHVIEW_PLANET_<SECTION>__<KEY>, as
-# in MESHVIEW_PLANET_SERVER__PORT=8080.
+# Meshview Rust Planet's configuration, with every key at its default. Any of
+# them can also be set from the environment as MESHVIEW_PLANET_<SECTION>__<KEY>,
+# as in MESHVIEW_PLANET_SERVER__PORT=8080.
 
 [server]
 # The address to listen on; "*" is every interface.
@@ -12,6 +12,11 @@ behind_proxy = false
 # The address the site is reached at, for link previews (the card a chat
 # shows for a shared link). Empty: taken from each request.
 domain = ""
+
+[site]
+# The map's kiosk mode (/?kiosk) for a kiosk proper: without its full screen
+# button, so that nothing on the screen leaves it.
+map_kiosk_lock = false
 
 [database]
 # The SQLite file, created with its schema if it is not there.

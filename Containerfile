@@ -74,7 +74,7 @@ FROM ${BINARY_SOURCE} AS binary
 
 FROM docker.io/library/alpine:${ALPINE_VERSION}
 
-LABEL org.opencontainers.image.title="Meshview Planet" \
+LABEL org.opencontainers.image.title="Meshview Rust Planet" \
       org.opencontainers.image.description="A world map of the nodes every Meshview instance sees" \
       org.opencontainers.image.source="https://github.com/meshview/planet" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later"

@@ -1,0 +1,59 @@
+/* What Planet's pages share, over Meshview's own stylesheet (meshview.css,
+   kept as Meshview has it): the page heading, panels, the data table, and the
+   map's pieces. */
+
+/* ---- Heading ------------------------------------------------------------
+   Title and context on the left, actions on the right; on narrow screens the
+   actions drop under the title. */
+
+.planet-heading { display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; min-height:40px; margin-bottom:14px; }
+.planet-heading h1 { margin:0; font-size:22px; line-height:1.2; }
+.planet-heading p { margin:0; color:var(--mesh-muted); font-size:14px; }
+.planet-heading-title { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; min-width:0; }
+
+/* ---- Panels ------------------------------------------------------------- */
+
+.planet-panel { min-width:0; margin-bottom:14px; overflow:hidden; background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:var(--mesh-radius); }
+.planet-panel-title { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 12px; min-height:52px; padding:8px 16px; border-bottom:1px solid var(--mesh-border); }
+.planet-panel-title h2 { margin:0; font-size:15px; }
+.planet-panel-body { padding:16px; font-size:14px; line-height:1.6; }
+.planet-panel-body p:last-child { margin-bottom:0; }
+.planet-count { padding:2px 9px; border-radius:999px; background:var(--mesh-soft); color:var(--mesh-primary); font-size:12.5px; font-weight:600; }
+.planet-metrics { margin-bottom:14px; }
+
+/* ---- Data table ---------------------------------------------------------
+   A light heading row that stays in view under the page header while the
+   list scrolls (--header-offset, base.html). The wrapper clips rather than
+   scrolls, so that the heading can follow the page; it scrolls sideways only
+   when the table cannot fit (.is-wide, set by the page's script). */
+
+.planet-table-wrap { width:100%; overflow:clip; }
+.planet-table-wrap.is-wide { overflow:auto; }
+.planet-table { width:100%; min-width:860px; margin:0; font-size:13px; border-collapse:separate; border-spacing:0; }
+.planet-table th { position:sticky; top:0; z-index:2; height:36px; padding:0 14px; background:var(--mesh-surface-2); border-bottom:1px solid var(--mesh-border); color:var(--mesh-muted); font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; text-align:left; vertical-align:middle; transition:top .2s ease; }
+.planet-table-wrap:not(.is-wide) > .planet-table th { top:var(--header-offset,0px); }
+@media(prefers-reduced-motion:reduce) { .planet-table th { transition:none; } }
+.planet-table td { height:42px; padding:4px 14px; border-bottom:1px solid var(--mesh-border-soft); vertical-align:middle; }
+.planet-table tbody tr:hover { background:var(--mesh-surface-2); }
+.planet-table tbody tr:last-child td { border-bottom:0; }
+.planet-table .is-number { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* Sortable headings: the whole heading is the button, with an arrow for the
+   column the list is sorted by. */
+.planet-table th:has(.sort-button) { padding:0; }
+.sort-button { display:flex; align-items:center; gap:5px; width:100%; height:36px; padding:0 14px; border:0; background:none; color:inherit; font:inherit; letter-spacing:inherit; text-transform:inherit; white-space:nowrap; cursor:pointer; }
+.is-number > .sort-button { justify-content:flex-end; }
+.sort-button:hover { background:var(--mesh-soft); color:var(--mesh-text); }
+.sort-button:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:-3px; }
+.sort-button::after { content:""; width:0; height:0; margin-top:4px; border:4px solid transparent; border-top-color:currentColor; opacity:.35; }
+th[aria-sort="ascending"] .sort-button,th[aria-sort="descending"] .sort-button { color:var(--mesh-primary); }
+th[aria-sort="ascending"] .sort-button::after { margin-top:-4px; border-top-color:transparent; border-bottom-color:currentColor; opacity:1; }
+th[aria-sort="descending"] .sort-button::after { opacity:1; }
+.planet-empty { padding:30px 16px; color:var(--mesh-muted); text-align:center; }
+
+/* ---- Map ---------------------------------------------------------------- */
+
+/* The grey map is the same tiles without their colours, so that the nodes'
+   stand out; dark, as the map's theme (meshview.css) inverts them. */
+.leaflet-container.is-grey .leaflet-tile-pane { filter:grayscale(1) brightness(1.04); }
+[data-map-theme="dark"] .leaflet-container.is-grey .leaflet-tile-pane { filter:invert(1) grayscale(1) brightness(1.5) contrast(.8); }
+.leaflet-control-layers-base label { margin:0; font-size:13px; }

@@ -118,6 +118,7 @@ fn tera(config: &Config, code: &str) -> anyhow::Result<Tera> {
     globals.insert("offline_days", &collector.offline_after_days.to_string());
     globals.insert("delete_days", &collector.delete_after_days.to_string());
     globals.insert("submissions", &config.submissions.enabled);
+    globals.insert("map_kiosk_lock", &config.site.map_kiosk_lock);
     // Previews need an absolute address: the configured one, or else a mark
     // that each answer replaces with the request's.
     globals.insert(
@@ -558,6 +559,17 @@ mod tests {
     }
 
     #[test]
+    fn a_locked_kiosk_has_no_way_out() {
+        let lock = r#"classList.add("mesh-kiosk-locked")"#;
+        let rendered = render(&Config::default()).unwrap();
+        assert!(!rendered.pages[&("map.html", "en")].html.contains(lock));
+        let mut config = Config::default();
+        config.site.map_kiosk_lock = true;
+        let rendered = render(&config).unwrap();
+        assert!(rendered.pages[&("map.html", "en")].html.contains(lock));
+    }
+
+    #[test]
     fn every_page_renders_in_every_language() {
         let rendered = render(&Config::default()).unwrap();
         for code in LANGUAGES {
@@ -582,13 +594,14 @@ mod tests {
         assert!(map.contains(
             r#"<meta property="og:image" content="https://planet.example.org/static/og.png">"#
         ));
-        assert!(map.contains(r#"<meta property="og:title" content="Meshview Planet">"#));
+        assert!(map.contains(r#"<meta property="og:title" content="Meshview Rust Planet">"#));
         assert!(map.contains(r#"<meta name="twitter:card" content="summary_large_image">"#));
         assert!(map.contains(r#"<meta property="og:locale" content="en_US">"#));
         let instances = &rendered.pages[&("instances.html", "es")].html;
         assert!(
-            instances
-                .contains(r#"<meta property="og:title" content="Instancias · Meshview Planet">"#)
+            instances.contains(
+                r#"<meta property="og:title" content="Instancias · Meshview Rust Planet">"#
+            )
         );
         assert!(instances.contains(r#"<meta property="og:description" content="Las instancias"#));
         assert!(instances.contains(r#"<meta property="og:locale" content="es_ES">"#));

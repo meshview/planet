@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}{{ "Page not found" | tr }} · Meshview Planet{% endblock %}
+{% block title %}{{ "Page not found" | tr }} · Meshview Rust Planet{% endblock %}
 
 {% block body %}
-<div class="mesh-heading">
-    <div class="mesh-heading-title">
+<div class="planet-heading">
+    <div class="planet-heading-title">
         <h1>{{ "Page not found" | tr }}</h1>
     </div>
 </div>
-<section class="mesh-panel">
-    <div class="mesh-panel-body">
+<section class="planet-panel">
+    <div class="planet-panel-body">
         <p>{{ "There is nothing at this address." | tr }}</p>
         <p><a href="/">{{ "Go to the map" | tr }}</a> · <a href="/instances">{{ "See the instances" | tr }}</a></p>
     </div>

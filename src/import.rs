@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Óscar García Amor <ogarcia@connectical.com>
 
 //! Seeding the list from a site that already lists Meshview instances, at its
-//! `/api/instances`, in the shape of Meshview World's API.
+//! `/api/instances`, in the original scheme's shape.
 //!
 //! That list has a free text name for each instance; this one keeps an area
 //! from a closed list. The instances known when this was written are mapped to

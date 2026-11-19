@@ -1,4 +1,4 @@
-# Meshview Planet documentation
+# Meshview Rust Planet documentation
 
 | Document | What it covers |
 |---|---|

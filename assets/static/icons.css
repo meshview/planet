@@ -2,25 +2,6 @@
    <span class="ti ti-world" aria-hidden="true"></span>. Add new icons to vendor/ and here. */
 .ti { display:inline-block; flex-shrink:0; width:1.15em; height:1.15em; vertical-align:-.2em; background-color:currentColor;
       -webkit-mask:var(--ti) center / contain no-repeat; mask:var(--ti) center / contain no-repeat; }
-.ti-menu-2 { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/menu-2.svg); }
-.ti-x { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/x.svg); }
-.ti-brand-github { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/brand-github.svg); }
 .ti-brand-rust { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/brand-rust.svg); }
-.ti-world { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/world.svg); }
-.ti-world-www { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/world-www.svg); }
-.ti-bug { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/bug.svg); }
-.ti-map-2 { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/map-2.svg); }
-.ti-map-pin { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/map-pin.svg); }
-.ti-chart-line { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/chart-line.svg); }
-.ti-router { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/router.svg); }
-.ti-check { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/check.svg); }
 .ti-info-circle { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/info-circle.svg); }
-.ti-help-circle { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/help-circle.svg); }
-.ti-refresh { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/refresh.svg); }
-.ti-link { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/link.svg); }
-.ti-search { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/search.svg); }
-.ti-access-point { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/access-point.svg); }
 .ti-plug { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/plug.svg); }
-.ti-activity { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/activity.svg); }
-.ti-arrows-maximize { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/arrows-maximize.svg); }
-.ti-arrows-minimize { --ti:url(/static/vendor/tabler-icons-3.51.0/icons/outline/arrows-minimize.svg); }

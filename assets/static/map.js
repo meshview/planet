@@ -60,6 +60,7 @@
     const countrySelect = document.getElementById("filter-country");
     const instanceSelect = document.getElementById("filter-instance");
     const channelBox = document.getElementById("channel-filters");
+    const channelPanel = document.getElementById("filter-container");
     const status = document.getElementById("map-status");
     const hiddenChannels = new Set();
     let instances = new Map();
@@ -72,7 +73,7 @@
     // Two looks for the map, both OpenStreetMap's tiles: as they are, and in
     // grey, without the greens and blues of the land and the sea, against
     // which the nodes' colours stand out. The grey is a filter on the tiles
-    // (see theme-styles.html), so both share the tiles the browser has.
+    // (see planet.css), so both share the tiles the browser has.
     const STYLE_KEY = "meshview-planet-map-style";
     const tiles = () => L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
@@ -101,50 +102,92 @@
         try { localStorage.setItem(STYLE_KEY, isGrey ? "grey" : "standard"); } catch {}
     });
 
-    // Full screen: only the header, the map and the channels.
-    const FullScreen = L.Control.extend({
-        options: {position: "topleft"},
+    // The map's credit, in the footer while it shows (map.html).
+    document.getElementById("footer-attribution").innerHTML =
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+    map.attributionControl.setPrefix(false);
+
+    // The map's tools, under the layer picker: fit the nodes shown, full
+    // screen, and copy a link to this view, with its filters.
+    const ICONS = {
+        fit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8v-2a2 2 0 0 1 2 -2h2M4 16v2a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v2M16 20h2a2 2 0 0 0 2 -2v-2M8 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0M16 16l-2.5 -2.5"/></svg>',
+        link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15l6 -6M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>',
+        enter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h4v4M14 10l6 -6M8 20h-4v-4M4 20l6 -6M16 20h4v-4M14 14l6 6M8 4h-4v4M4 4l6 6"/></svg>',
+        exit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h4v-4M3 3l6 6M5 15h4v4M3 21l6 -6M19 9h-4v-4M15 9l6 -6M19 15h-4v4M15 15l6 6"/></svg>',
+        copied: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg>',
+    };
+    const Tools = L.Control.extend({
+        options: {position: "topright"},
         onAdd() {
-            const bar = L.DomUtil.create("div", "leaflet-bar");
-            const button = L.DomUtil.create("button", "planet-map-button", bar);
-            button.type = "button";
-            const icon = L.DomUtil.create("span", "ti", button);
-            icon.setAttribute("aria-hidden", "true");
-            L.DomEvent.disableClickPropagation(bar);
-            L.DomEvent.on(button, "click", () => setFull(!document.body.classList.contains("is-map-full"), {remember: true}));
-            this.update = full => {
-                const label = full ? MeshI18n.t("Leave full screen") : MeshI18n.t("Full screen map");
-                button.title = label;
-                button.setAttribute("aria-label", label);
-                button.setAttribute("aria-pressed", String(full));
-                icon.className = `ti ${full ? "ti-arrows-minimize" : "ti-arrows-maximize"}`;
+            const bar = L.DomUtil.create("div", "leaflet-bar planet-map-tools");
+            const button = (icon, label, action) => {
+                const element = L.DomUtil.create("button", "", bar);
+                element.type = "button";
+                element.title = label;
+                element.setAttribute("aria-label", label);
+                element.innerHTML = ICONS[icon];
+                L.DomEvent.on(element, "click", () => action(element));
+                return element;
             };
-            this.update(false);
+            button("fit", MeshI18n.t("Fit the nodes shown"), () => fitShown());
+            kioskButton = button("enter", MeshI18n.t("Full screen"), () => toggleKiosk());
+            kioskButton.id = "kiosk-button";
+            button("link", MeshI18n.t("Copy a link to this view"), async element => {
+                saveState();
+                try {
+                    await navigator.clipboard.writeText(location.href);
+                    element.classList.add("is-copied");
+                    element.innerHTML = ICONS.copied;
+                    setTimeout(() => {
+                        element.classList.remove("is-copied");
+                        element.innerHTML = ICONS.link;
+                    }, 1600);
+                } catch {
+                    window.prompt(MeshI18n.t("Copy a link to this view"), location.href);
+                }
+            });
+            bar.lastElementChild.id = "share-button";
+            L.DomEvent.disableClickPropagation(bar);
             return bar;
         },
     });
-    const fullScreen = new FullScreen().addTo(map);
-    const header = document.querySelector(".mesh-header");
-    // Whether the visitor left the map full screen, for their next visit. Only
-    // what they chose themselves: opening a link with ?full=1 changes nothing.
-    const FULL_KEY = "meshview-planet-map-full";
-    function setFull(full, {remember = false} = {}) {
-        if (remember) {
-            try { localStorage.setItem(FULL_KEY, full ? "1" : "0"); } catch {}
-        }
-        document.body.classList.toggle("is-map-full", full);
-        document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
-        header.classList.remove("is-hidden");
-        fullScreen.update(full);
-        map.invalidateSize();
-        saveState();
+    let kioskButton = null;
+    new Tools().addTo(map);
+
+    // Full screen: the page turns into its kiosk mode where it is, the browser
+    // fills the screen with it, and leaving the browser's full screen (Esc)
+    // leaves both. Loaded as a kiosk (?kiosk), only the browser's full screen
+    // comes and goes. Without that (iPhones), kiosk mode alone. As Meshview.
+    const root = document.documentElement;
+    const loadedAsKiosk = root.classList.contains("mesh-kiosk");
+    const kioskOn = () => loadedAsKiosk ? Boolean(document.fullscreenElement) : root.classList.contains("mesh-kiosk");
+    function syncKiosk() {
+        const on = kioskOn();
+        const label = on ? MeshI18n.t("Exit full screen") : MeshI18n.t("Full screen");
+        kioskButton.title = label;
+        kioskButton.setAttribute("aria-label", label);
+        kioskButton.setAttribute("aria-pressed", String(on));
+        kioskButton.innerHTML = on ? ICONS.exit : ICONS.enter;
+        setTimeout(() => map.invalidateSize(), 50);
     }
-    document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && document.body.classList.contains("is-map-full")) setFull(false, {remember: true});
+    function setKiosk(on) {
+        if (!loadedAsKiosk) root.classList.toggle("mesh-kiosk", on);
+        syncKiosk();
+    }
+    function toggleKiosk() {
+        if (!kioskOn()) {
+            setKiosk(true);
+            root.requestFullscreen?.().catch(() => {});
+        } else {
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            setKiosk(false);
+        }
+    }
+    document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement) setKiosk(false); else syncKiosk();
     });
-    window.addEventListener("resize", () => {
-        document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
-    });
+    syncKiosk();
+
     const clusters = L.markerClusterGroup({
         chunkedLoading: true,
         maxClusterRadius: 45,
@@ -165,18 +208,20 @@
     // For the browser's console, and for tests that drive the page.
     window.meshPlanet = {map, clusters};
 
+    // A node's popup, laid out as Meshview's: its short name on top, linked
+    // to its page on its instance, its long name under it, its id, and its
+    // facts, leaving out those it has none for.
     function popup(node) {
         const instance = instances.get(node.instance_url);
         const id = node.node_id;
         const hex = `!${Number(id).toString(16).padStart(8, "0")}`;
-        const name = node.long_name || node.short_name || MeshI18n.t("Node {id}", {id});
-        const short = node.short_name && node.short_name !== name
-            ? ` <span class="node-popup-short">(${escapeHtml(node.short_name)})</span>` : "";
+        const unnamed = MeshI18n.t("Node {id}", {id});
+        const short = node.short_name || "";
+        const long = node.long_name && node.long_name !== short ? node.long_name : "";
         const page = `${node.instance_url}/node/${encodeURIComponent(id)}`;
         const area = instance ? instance.area[MeshI18n.language] || instance.area.en : hostOf(node.instance_url);
         const facts = [
             [MeshI18n.t("Instance"), `<a href="${escapeHtml(node.instance_url)}/map" target="_blank" rel="noopener">${escapeHtml(area)}</a>`, true],
-            [MeshI18n.t("Role"), node.role],
             [MeshI18n.t("Channel"), node.channel],
             [MeshI18n.t("Hardware"), node.hw_model],
             [MeshI18n.t("Firmware"), node.firmware],
@@ -186,9 +231,11 @@
         ].filter(([, value]) => value)
             .map(([label, value, html]) => `<dt>${escapeHtml(label)}</dt><dd>${html ? value : escapeHtml(value)}</dd>`)
             .join("");
+        const meta = [node.role, `${unnamed} (${hex})`].filter(Boolean).join(" · ");
         return `<div class="node-popup">
-            <div class="node-popup-title"><a href="${escapeHtml(page)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>${short}</div>
-            <p class="node-popup-meta">${escapeHtml(MeshI18n.t("Node {id}", {id}))} (${hex})</p>
+            <a class="node-popup-short" href="${escapeHtml(page)}" target="_blank" rel="noopener">${escapeHtml(short || long || unnamed)}</a>
+            ${short && long ? `<div class="node-popup-name">${escapeHtml(long)}</div>` : ""}
+            <p class="node-popup-meta">${escapeHtml(meta)}</p>
             <dl class="node-popup-facts">${facts}</dl>
         </div>`;
     }
@@ -231,15 +278,21 @@
             new Set([...sources].map(url => instances.get(url)?.country).filter(Boolean)).size);
         document.getElementById("metric-nodes").textContent = formatNumber(heard);
         document.getElementById("metric-mapped").textContent = formatNumber(mapped);
-        document.getElementById("header-nodes").textContent = formatNumber(heard);
-        document.getElementById("header-mapped").textContent = formatNumber(mapped);
+        document.getElementById("summary-mapped").textContent = formatNumber(mapped);
         renderChannels(scoped);
-        if (fit && shown.length) {
-            map.fitBounds(L.latLngBounds(shown.map(marker => marker.getLatLng())), {padding: [30, 30], maxZoom: 11});
-        } else if (fit) {
+        shownMarkers = shown;
+        if (fit) fitShown();
+        saveState();
+    }
+
+    // The nodes shown, all in view; none, the world.
+    let shownMarkers = [];
+    function fitShown() {
+        if (shownMarkers.length) {
+            map.fitBounds(L.latLngBounds(shownMarkers.map(marker => marker.getLatLng())), {padding: [30, 30], maxZoom: 11});
+        } else {
             map.setView([25, 0], 2);
         }
-        saveState();
     }
 
     function renderChannels(scoped) {
@@ -253,6 +306,7 @@
         }
         const groups = [...counts.keys()].sort((a, b) =>
             a === OTHER ? 1 : b === OTHER ? -1 : counts.get(b) - counts.get(a));
+        channelPanel.hidden = groups.length === 0;
         channelBox.replaceChildren(...groups.map(group => {
             const label = document.createElement("label");
             label.className = "map-filter";
@@ -308,7 +362,7 @@
         set("days", daysSelect.value, daysSelect.dataset.default);
         set("country", countrySelect.value, "");
         set("instance", instanceSelect.value, "");
-        set("full", document.body.classList.contains("is-map-full") ? "1" : "", "");
+        url.searchParams.delete("full");
         url.searchParams.delete("lang");
         history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
@@ -330,7 +384,8 @@
 
     async function load({fit = false} = {}) {
         status.hidden = false;
-        status.className = "is-loading";
+        status.classList.remove("is-error");
+        status.classList.add("is-loading");
         status.textContent = MeshI18n.t("Loading nodes…");
         try {
             const [listed, answer] = await Promise.all([
@@ -352,21 +407,38 @@
             apply({fit});
         } catch (error) {
             console.error(error);
-            status.className = "is-error";
+            status.classList.replace("is-loading", "is-error");
             status.textContent = MeshI18n.t("The nodes could not be loaded. Try again in a while.");
         }
     }
 
     fillDays();
-    // The address says, if it does (?full=1 or ?full=0); else what the visitor
-    // chose last time.
-    let startFull = false;
-    if (params.has("full")) {
-        startFull = params.get("full") === "1";
-    } else {
-        try { startFull = localStorage.getItem(FULL_KEY) === "1"; } catch {}
-    }
-    if (startFull) setFull(true);
+    // On a phone the figures and the channels start folded, and what is done
+    // there is not kept: unfolded, they cover much of so small a map.
+    const phone = window.matchMedia("(max-width:700px)").matches;
+    if (phone) document.getElementById("planet-summary").open = false;
+    (() => {
+        const KEY = "meshview-planet-channels-folded";
+        const toggle = document.getElementById("map-legend-toggle");
+        const set = folded => {
+            channelPanel.classList.toggle("is-folded", folded);
+            toggle.setAttribute("aria-expanded", String(!folded));
+            const label = folded ? MeshI18n.t("Show the channels") : MeshI18n.t("Hide the channels");
+            toggle.title = label;
+            toggle.setAttribute("aria-label", label);
+        };
+        let folded = phone;
+        if (!phone) {
+            try { folded = localStorage.getItem(KEY) === "1"; } catch {}
+        }
+        set(folded);
+        toggle.addEventListener("click", () => {
+            folded = !folded;
+            set(folded);
+            if (phone) return;
+            try { folded ? localStorage.setItem(KEY, "1") : localStorage.removeItem(KEY); } catch {}
+        });
+    })();
     daysSelect.addEventListener("change", () => load());
     countrySelect.addEventListener("change", () => {
         fillInstances();

@@ -1,6 +1,6 @@
 # Configuration
 
-Meshview Planet is configured with a TOML file, environment variables, or both.
+Meshview Rust Planet is configured with a TOML file, environment variables, or both.
 Every key has a default, so no file at all is a valid configuration: an empty
 database and the defaults are a working site that lists no instances yet.
 
@@ -65,6 +65,12 @@ a path. The log says which variables were used, by name, at start.
 | `port` | `8080` | The port. |
 | `domain` | `""` | The address the site is reached at, as `planet.example.org` (HTTPS is assumed unless it starts with `http://`). Link previews, the card a chat or social network shows for a shared link, take their picture from it, `/static/og.png`, as they need an absolute address. Empty, it is taken from each request's `Host` (and, with `behind_proxy`, `X-Forwarded-Proto`). It does not configure binding or TLS. |
 | `behind_proxy` | `false` | Take the client's address from the last entry of `X-Forwarded-For`, for the submission limit. Only behind a reverse proxy that sets it: anyone can send the header to a server that answers directly, and so choose the address they are counted as. |
+
+### `[site]`
+
+| Key | Default | |
+|---|---|---|
+| `map_kiosk_lock` | `false` | The map's kiosk mode (`/?kiosk`), the map alone on the whole screen, without its full screen button, so that nothing on the screen leaves it: for a kiosk proper. |
 
 ### `[database]`
 

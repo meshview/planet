@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Óscar García Amor <ogarcia@connectical.com>
 
-//! Meshview World's addresses, answering in its shapes, so that
+//! The original addresses, answering in their original shapes, so that
 //! whatever uses them goes on working. `name` and `source_name`, the old free
 //! text area, are the area's English name.
 

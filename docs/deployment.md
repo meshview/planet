@@ -1,6 +1,6 @@
 # Deployment
 
-Meshview Planet is one process: it serves the web and collects from the
+Meshview Rust Planet is one process: it serves the web and collects from the
 instances, writing one SQLite file. There is nothing else to run beside it.
 
 ## Commands
@@ -36,7 +36,7 @@ The site starts empty, and fills as instances are added from its instances
 page, or with `meshview-planet instance add`.
 
 It can be seeded instead from a site that already lists Meshview instances, in
-Meshview World's shape, before the first start:
+the original scheme, before the first start:
 
 ```sh
 meshview-planet import https://planet.example.org/api/instances
@@ -65,7 +65,7 @@ A systemd unit, as an example:
 
 ```ini
 [Unit]
-Description=Meshview Planet
+Description=Meshview Rust Planet
 After=network-online.target
 Wants=network-online.target
 

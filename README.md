@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/static/meshview-icon.svg" alt="Meshview Planet" width="128" height="128">
+<img src="assets/static/meshview-icon.svg" alt="Meshview Rust Planet" width="128" height="128">
 
-# Meshview Planet
+# Meshview Rust Planet
 
 **A world map of the nodes every [Meshview](https://github.com/meshview/meshview) instance sees**
 
@@ -19,7 +19,7 @@
 
 [Documentation](docs/README.md) · [Running it](#running-it) · [API](docs/api.md) · [Meshview](https://github.com/meshview/meshview) · [Meshview's website](https://meshview.github.io/)
 
-<img src="docs/map.webp" alt="Meshview Planet's map: the nodes of every instance, clustered, with the figures above and the channels below" width="860">
+<img src="docs/map.webp" alt="Meshview Rust Planet's map: the nodes of every instance, clustered, with the figures and the filters beside the zoom and the channels below" width="860">
 
 </div>
 

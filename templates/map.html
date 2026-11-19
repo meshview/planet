@@ -7,109 +7,154 @@
 <script src="/static/vendor/leaflet.markercluster-1.5.3/dist/leaflet.markercluster.js"></script>
 {% endblock %}
 
+{% block body_class %}planet-map-page{% endblock %}
+
 {% block css %}
+<script>
+// ?kiosk, with or without a value: the map alone, filling the screen; locked
+// ([site] map_kiosk_lock), with no way out of it.
+if (new URLSearchParams(location.search).has("kiosk")) {
+    document.documentElement.classList.add("mesh-kiosk");
+    {% if map_kiosk_lock %}document.documentElement.classList.add("mesh-kiosk-locked");{% endif %}
+}
+</script>
 <style>
-.planet-map-panel { display:flex; flex-direction:column; }
-.planet-filter { display:inline-flex; align-items:center; gap:6px; min-width:0; }
-.planet-filter .mesh-select { max-width:300px; }
+/* ---- The map ------------------------------------------------------------
+   As Meshview's map page: the map fills everything between the header and the
+   footer, and the rest floats over it: the figures and the filters beside the
+   zoom, the channels along the bottom, the map's own tools on the right. On
+   phones the map fills the screen under the header, and the footer follows. */
+
+body.planet-map-page { height:100dvh; overflow:hidden; }
+.planet-map-page .mesh-content { position:relative; flex:1 1 auto; min-height:0; max-width:none; padding:0; }
+.planet-map-panel { position:absolute; inset:0; }
+#map { height:100%; }
 @media(max-width:700px) {
-    .planet-map-filters { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px 10px; width:100%; }
-    .planet-filter { display:contents; }
-    .planet-filter .mesh-select { width:100%; max-width:none; }
+    body.planet-map-page { height:auto; overflow:visible; }
+    .planet-map-page .mesh-content { flex:none; height:calc(100dvh - 52px); min-height:420px; }
 }
-#map { height:calc(100dvh - 300px); min-height:440px; background:var(--mesh-stripe); z-index:1; }
-.planet-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:10px 12px; border-top:1px solid var(--mesh-border); font-size:12px; }
-.planet-filters:empty { display:none; }
-.map-filter { display:inline-flex; align-items:center; gap:6px; min-height:30px; margin:0; padding:0 11px 0 9px; border:1px solid var(--mesh-border); border-radius:15px; background:var(--mesh-surface); color:var(--mesh-text); font-size:12px; white-space:nowrap; cursor:pointer; user-select:none; }
+/* The map's credit goes to the footer while it shows; on phones it stays in
+   the map's corner. */
+.mesh-footer-attribution { display:none; }
+.mesh-footer-attribution a { color:inherit; }
+.mesh-footer-attribution a:hover { color:var(--mesh-primary); text-decoration:none; }
+@media(min-width:701px) {
+    .planet-map-panel .leaflet-control-attribution { display:none; }
+    .planet-map-page .mesh-footer-attribution { display:inline; }
+}
+
+/* Floating cards, and the map's own controls, framed alike. */
+.planet-float { background:var(--mesh-surface); border:1px solid var(--mesh-border); border-radius:var(--mesh-radius); box-shadow:0 2px 12px rgba(16,25,37,.10); }
+.planet-map-panel .leaflet-bar,.planet-map-panel .leaflet-control-layers { border:1px solid var(--mesh-border); border-radius:var(--mesh-radius); box-shadow:0 2px 12px rgba(16,25,37,.10); background-clip:padding-box; overflow:hidden; }
+.planet-map-panel .leaflet-bar a { width:36px; height:36px; line-height:36px; border-bottom-color:var(--mesh-border); color:var(--mesh-text); }
+.planet-map-panel .leaflet-control-layers-toggle { width:40px; height:40px; }
+.planet-map-panel .leaflet-control-layers-expanded { padding:10px 12px; font-size:13px; }
+
+/* The map's tools (fit, full screen, share): icon buttons under the layer
+   picker. */
+.planet-map-tools { display:flex; flex-direction:column; background:var(--mesh-surface); }
+.planet-map-tools button { display:flex; align-items:center; justify-content:center; width:40px; height:40px; padding:0; border:0; border-bottom:1px solid var(--mesh-border); background:var(--mesh-surface); color:var(--mesh-primary); }
+.planet-map-tools button:last-child { border-bottom:0; }
+.planet-map-tools button:hover { background:var(--mesh-surface-2); }
+.planet-map-tools svg { width:17px; height:17px; }
+.planet-map-tools button.is-copied { color:var(--mesh-live); }
+
+/* ---- Kiosk: the map alone, filling the screen ---- */
+html.mesh-kiosk,.mesh-kiosk body { width:100%; height:100%; overflow:hidden; }
+.mesh-kiosk :is(.mesh-header,.mesh-footer) { display:none; }
+.mesh-kiosk .mesh-content { position:fixed; inset:0; height:auto; min-height:0; padding:0; max-width:none; }
+.mesh-kiosk #share-button { display:none; }
+/* A kiosk proper ([site] map_kiosk_lock) has no way out of its full screen. */
+.mesh-kiosk-locked.mesh-kiosk #kiosk-button { display:none; }
+/* Without the footer, the map credits its tiles itself again. */
+.mesh-kiosk .planet-map-panel .leaflet-control-attribution { display:block; }
+
+/* The figures and the filters, beside the zoom. Folded, only their title and
+   the nodes on the map. */
+#planet-summary { position:absolute; z-index:800; top:10px; left:58px; width:300px; max-width:calc(100% - 124px); font-size:13px; }
+#planet-summary > summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:6px 12px; list-style:none; cursor:pointer; }
+#planet-summary > summary::-webkit-details-marker { display:none; }
+#planet-summary > summary::after { content:""; flex-shrink:0; width:12px; height:12px; background:currentColor; opacity:.6; -webkit-mask:url(/static/vendor/tabler-icons-3.51.0/icons/outline/chevron-right.svg) center / contain no-repeat; mask:url(/static/vendor/tabler-icons-3.51.0/icons/outline/chevron-right.svg) center / contain no-repeat; transition:transform .15s ease; }
+#planet-summary[open] > summary::after { transform:rotate(90deg); }
+#planet-summary h1 { flex:1; min-width:0; margin:0; font-size:13.5px; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#planet-summary[open] .planet-count { display:none; }
+.planet-figures { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:0; border-top:1px solid var(--mesh-border-soft); }
+.planet-figures > div { padding:8px 12px; border-bottom:1px solid var(--mesh-border-soft); }
+.planet-figures > div:nth-child(odd) { border-right:1px solid var(--mesh-border-soft); }
+.planet-figures dt { color:var(--mesh-muted); font-size:11.5px; font-weight:500; }
+.planet-figures dd { margin:0; font-size:18px; font-weight:650; line-height:1.3; }
+.planet-filters { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:8px 10px; padding:10px 12px 12px; }
+.planet-filters label { color:var(--mesh-muted); font-size:12.5px; }
+.planet-filters .mesh-select { width:100%; height:32px; font-size:13px; }
+
+/* The channels along the bottom: pills, each the checkbox, its colour, its
+   name and its nodes, folding away into the button before them. */
+#filter-container { position:absolute; z-index:800; left:16px; bottom:16px; display:flex; align-items:center; gap:6px; max-width:calc(100% - 32px); padding:8px; }
+.map-legend-toggle { display:flex; align-items:center; justify-content:center; flex-shrink:0; align-self:stretch; width:22px; margin:-8px 0 -8px -8px; padding:0; border:0; border-radius:var(--mesh-radius) 0 0 var(--mesh-radius); background:transparent; color:var(--mesh-muted); }
+.map-legend-toggle:hover { background:var(--mesh-surface-2); color:var(--mesh-text); }
+.map-legend-toggle svg { width:16px; height:16px; transition:transform .2s ease; }
+#filter-container.is-folded { gap:0; }
+#filter-container.is-folded .map-filter-pills { display:none; }
+#filter-container.is-folded .map-legend-toggle { width:32px; height:32px; margin:-8px; border-radius:var(--mesh-radius); }
+#filter-container.is-folded .map-legend-toggle svg { transform:rotate(180deg); }
+.map-filter-pills { display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-width:0; }
+.map-filter { display:inline-flex; align-items:center; gap:7px; height:32px; margin:0; padding:0 12px 0 10px; border:1px solid var(--mesh-border-strong); border-radius:16px; background:var(--mesh-surface); font-size:13px; font-weight:500; white-space:nowrap; cursor:pointer; user-select:none; }
 .map-filter:has(input:checked) { background:var(--mesh-soft); border-color:var(--mesh-hover); }
-.map-filter:hover,.map-filter:has(input:checked):hover { border-color:var(--mesh-muted); }
-.map-filter input { margin:0; accent-color:var(--mesh-primary); }
+.map-filter:hover { border-color:var(--mesh-muted); }
+.map-filter input { margin:0; }
 .map-filter:has(input:focus-visible) { outline:2px solid var(--mesh-primary); outline-offset:2px; }
-.map-filter-dot { flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--chip-color,#6c757d); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); }
-.map-filter small { color:var(--mesh-muted); font-variant-numeric:tabular-nums; }
-#map-status { padding:10px 12px; font-size:13px; color:var(--mesh-muted); }
-#map-status[hidden] { display:none; }
-#map-status.is-error { color:var(--mesh-bad); }
-/* Clusters in the site's blue, larger as they hold more. */
-.planet-cluster { display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(var(--mesh-primary-rgb),.25); }
-.planet-cluster span { display:flex; align-items:center; justify-content:center; width:calc(100% - 8px); height:calc(100% - 8px); border-radius:50%; background:var(--mesh-brand); color:white; font:600 12px/1 "Inter Variable",system-ui,sans-serif; font-variant-numeric:tabular-nums; box-shadow:0 1px 3px rgba(0,0,0,.3); }
-/* A node's popup, laid out as Meshview's node inspector. */
-.leaflet-popup-content { margin:12px 16px; }
-.node-popup { min-width:240px; font-size:12px; }
-.node-popup-title { font-size:15px; font-weight:650; overflow-wrap:anywhere; }
-.node-popup-title a { text-decoration:none; }
-.node-popup-title a:hover { text-decoration:underline; }
-.node-popup-short { color:var(--mesh-muted); font-weight:500; }
-.node-popup-meta { color:var(--mesh-muted); font-size:11px; margin:3px 0 10px; overflow-wrap:anywhere; }
-.node-popup-facts { display:grid; grid-template-columns:auto minmax(0,1fr); gap:5px 12px; margin:0; }
-.node-popup-facts dt { color:var(--mesh-muted); font-weight:500; }
-.node-popup-facts dd { margin:0; overflow-wrap:anywhere; }
-@media(max-width:700px) { #map { height:calc(100dvh - 260px); min-height:360px; } }
-/* Map buttons, in Leaflet's own look. */
-.planet-map-button { display:flex; align-items:center; justify-content:center; width:34px; height:34px; padding:0; border:0; background:var(--mesh-surface); color:var(--mesh-text); font-size:18px; cursor:pointer; }
-.planet-map-button:hover { background:var(--mesh-stripe); }
-.planet-map-button:focus-visible { outline:2px solid var(--mesh-primary); outline-offset:-2px; }
-.leaflet-control-layers-base label { margin:0; font-size:12px; }
-/* Full screen: the header, the map and the channels, nothing else. The
-   header then carries the counts. */
-.planet-header-stats { display:none; align-items:center; gap:16px; margin-left:auto; color:#e6effb; font-size:13px; white-space:nowrap; }
-.planet-header-stats strong { color:white; font-weight:650; font-variant-numeric:tabular-nums; }
-body.is-map-full .planet-header-stats { display:flex; }
-body.is-map-full .mesh-header-tools { margin-left:0; }
-body.is-map-full :is(.mesh-heading,.mesh-metrics,.mesh-footer) { display:none; }
-body.is-map-full .planet-map-panel { position:fixed; top:var(--header-height,48px); left:0; right:0; bottom:0; margin:0; border:0; border-radius:0; z-index:10; }
-body.is-map-full #map { flex:1 1 auto; height:auto; min-height:0; }
-@media(max-width:860px) {
-    body.is-map-full .planet-header-stats { flex-direction:column; align-items:flex-end; gap:0; font-size:11px; line-height:1.3; }
-    body.is-map-full .mesh-brand span { display:none; }
+.map-filter-dot { flex-shrink:0; width:9px; height:9px; border-radius:3px; background:var(--chip-color,#6c757d); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); }
+.map-filter small { color:var(--mesh-muted); font-size:12px; font-weight:400; }
+@media(pointer:coarse) { .map-filter { height:34px; border-radius:17px; } }
+@media(max-width:700px) {
+    #planet-summary { right:62px; width:auto; max-width:none; }
+    #filter-container { left:10px; bottom:10px; max-width:calc(100% - 20px); }
+    .map-filter { height:30px; padding:0 10px 0 8px; font-size:12.5px; }
 }
+
+/* Loading the nodes, or failing to, over the middle of the map. */
+#map-status { position:absolute; z-index:900; top:12px; left:50%; transform:translateX(-50%); margin:0; padding:8px 12px; font-size:13px; color:var(--mesh-muted); white-space:nowrap; }
+#map-status.is-error { width:max-content; max-width:calc(100% - 24px); color:var(--mesh-danger); white-space:normal; }
+@media(max-width:700px) { #map-status { top:auto; bottom:64px; } }
+
+/* Clusters in the accent, larger as they hold more. */
+.planet-cluster { display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(var(--mesh-primary-rgb),.25); }
+.planet-cluster span { display:flex; align-items:center; justify-content:center; width:calc(100% - 8px); height:calc(100% - 8px); border-radius:50%; background:var(--mesh-primary); color:var(--mesh-on-primary); font-size:12px; font-weight:650; line-height:1; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+.leaflet-popup-content { margin:12px 16px; }
+/* Planet's facts have longer names than Meshview's: their column fits them. */
+.node-popup-facts { grid-template-columns:auto minmax(0,1fr); column-gap:12px; }
 </style>
 {% endblock %}
 
-{% block header_extra %}
-<div class="planet-header-stats" aria-live="polite">
-    <span><span class="planet-header-label">{{ "Nodes" | tr }}</span> <strong id="header-nodes">—</strong></span>
-    <span><span class="planet-header-label">{{ "On the map" | tr }}</span> <strong id="header-mapped">—</strong></span>
-</div>
-{% endblock %}
-
 {% block body %}
-<div class="mesh-heading">
-    <div class="mesh-heading-title">
-        <h1>{{ "World map" | tr }}</h1>
-        <p>{{ "Nodes heard by every Meshview instance listed." | tr }}</p>
-    </div>
-    <div class="mesh-heading-actions planet-map-filters">
-        <span class="planet-filter">
+<section class="planet-map-panel" aria-label="{{ "Map" | tr }}">
+    <div id="map"></div>
+    <details id="planet-summary" class="planet-float" open>
+        <summary><h1>{{ "World map" | tr }}</h1><span id="summary-mapped" class="planet-count" title="{{ "On the map" | tr }}">—</span></summary>
+        <dl class="planet-figures">
+            <div><dt>{{ "Nodes" | tr }}</dt><dd id="metric-nodes">—</dd></div>
+            <div><dt>{{ "On the map" | tr }}</dt><dd id="metric-mapped">—</dd></div>
+            <div><dt>{{ "Instances" | tr }}</dt><dd id="metric-instances">—</dd></div>
+            <div><dt>{{ "Countries" | tr }}</dt><dd id="metric-countries">—</dd></div>
+        </dl>
+        <div class="planet-filters">
             <label for="filter-days">{{ "Heard in" | tr }}</label>
             <select id="filter-days" class="mesh-select" data-default="{{ days_active }}"></select>
-        </span>
-        <span class="planet-filter">
             <label for="filter-country">{{ "Country" | tr }}</label>
             <select id="filter-country" class="mesh-select">
                 <option value="">{{ "All countries" | tr }}</option>
             </select>
-        </span>
-        <span class="planet-filter">
             <label for="filter-instance">{{ "Instance" | tr }}</label>
             <select id="filter-instance" class="mesh-select">
                 <option value="">{{ "All instances" | tr }}</option>
             </select>
-        </span>
+        </div>
+    </details>
+    <div id="filter-container" class="planet-float" role="group" aria-label="{{ "Channels" | tr }}" hidden>
+        <button type="button" id="map-legend-toggle" class="map-legend-toggle" aria-controls="channel-filters" aria-expanded="true" title="{{ "Hide the channels" | tr }}" aria-label="{{ "Hide the channels" | tr }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"/></svg></button>
+        <div id="channel-filters" class="map-filter-pills"></div>
     </div>
-</div>
-
-<div class="mesh-metrics">
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-router" aria-hidden="true"></span></span><span>{{ "Instances" | tr }}</span><strong id="metric-instances">—</strong><small>{{ "with nodes in the period" | tr }}</small></div>
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-access-point" aria-hidden="true"></span></span><span>{{ "Nodes" | tr }}</span><strong id="metric-nodes">—</strong><small id="metric-nodes-note">{{ "heard in the period" | tr }}</small></div>
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-map-pin" aria-hidden="true"></span></span><span>{{ "On the map" | tr }}</span><strong id="metric-mapped">—</strong><small>{{ "with a position" | tr }}</small></div>
-    <div class="mesh-metric"><span class="mesh-metric-icon"><span class="ti ti-world" aria-hidden="true"></span></span><span>{{ "Countries" | tr }}</span><strong id="metric-countries">—</strong><small>{{ "with an instance" | tr }}</small></div>
-</div>
-
-<section class="mesh-panel planet-map-panel" aria-label="{{ "Map" | tr }}">
-    <div id="map"></div>
-    <p id="map-status" class="is-loading" role="status">{{ "Loading nodes…" | tr }}</p>
-    <div id="channel-filters" class="planet-filters" role="group" aria-label="{{ "Channels" | tr }}"></div>
+    <p id="map-status" class="planet-float is-loading" role="status">{{ "Loading nodes…" | tr }}</p>
 </section>
 {% endblock %}
 

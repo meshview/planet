@@ -23,7 +23,7 @@ The data only changes when an instance is collected or added, so every answer ca
 
 This is version 1, under `/api/v1`. Its addresses and the shape of its answers do not change once published; what would break a client goes into a next version, served beside it. `/version` and `/livez` are outside any version.
 
-The addresses of Meshview Planet, which this takes over from, keep answering in its shapes: `/api/nodes`, `/api/instances`, `/api/histogram` and `/out/node-link`. They are not described here; new clients should use `/api/v1`.
+The original addresses, from before `/api/v1`, keep answering in their original shapes: `/api/nodes`, `/api/instances`, `/api/histogram` and `/out/node-link`. They are not described here; new clients should use `/api/v1`.
 
 ## Examples
 
