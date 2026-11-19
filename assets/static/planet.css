@@ -57,3 +57,5 @@ th[aria-sort="descending"] .sort-button::after { opacity:1; }
 .leaflet-container.is-grey .leaflet-tile-pane { filter:grayscale(1) brightness(1.04); }
 [data-map-theme="dark"] .leaflet-container.is-grey .leaflet-tile-pane { filter:invert(1) grayscale(1) brightness(1.5) contrast(.8); }
 .leaflet-control-layers-base label { margin:0; font-size:13px; }
+/* A node's instance, at the foot of its popup and as wide as it. */
+.leaflet-container a.node-popup-instance { display:block; margin-top:10px; padding-top:10px; border-top:1px solid var(--mesh-border-soft); color:var(--mesh-primary); overflow-wrap:anywhere; }

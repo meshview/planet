@@ -209,8 +209,9 @@
     window.meshPlanet = {map, clusters};
 
     // A node's popup, laid out as Meshview's: its short name on top, linked
-    // to its page on its instance, its long name under it, its id, and its
-    // facts, leaving out those it has none for.
+    // to its page on its instance, its long name under it, its id, its
+    // facts, leaving out those it has none for, and at the foot its instance,
+    // by its address, as several can share an area; the area on hover.
     function popup(node) {
         const instance = instances.get(node.instance_url);
         const id = node.node_id;
@@ -219,9 +220,8 @@
         const short = node.short_name || "";
         const long = node.long_name && node.long_name !== short ? node.long_name : "";
         const page = `${node.instance_url}/node/${encodeURIComponent(id)}`;
-        const area = instance ? instance.area[MeshI18n.language] || instance.area.en : hostOf(node.instance_url);
+        const area = instance ? instance.area[MeshI18n.language] || instance.area.en : "";
         const facts = [
-            [MeshI18n.t("Instance"), `<a href="${escapeHtml(node.instance_url)}/map" target="_blank" rel="noopener">${escapeHtml(area)}</a>`, true],
             [MeshI18n.t("Channel"), node.channel],
             [MeshI18n.t("Hardware"), node.hw_model],
             [MeshI18n.t("Firmware"), node.firmware],
@@ -237,6 +237,7 @@
             ${short && long ? `<div class="node-popup-name">${escapeHtml(long)}</div>` : ""}
             <p class="node-popup-meta">${escapeHtml(meta)}</p>
             <dl class="node-popup-facts">${facts}</dl>
+            <a class="node-popup-instance" href="${escapeHtml(node.instance_url)}/map" target="_blank" rel="noopener" title="${escapeHtml(area)}">${escapeHtml(hostOf(node.instance_url))}</a>
         </div>`;
     }
 
