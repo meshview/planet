@@ -426,7 +426,7 @@ hr { margin:1rem 0; border:0; border-top:1px solid var(--mesh-border); }
 .mesh-button.is-primary:hover { border-color:var(--mesh-primary-dark); background:var(--mesh-primary-dark); color:var(--mesh-on-primary); }
 .mesh-button.is-ghost { border-color:transparent; background:transparent; color:var(--mesh-primary); font-weight:600; }
 .mesh-button.is-ghost:hover { background:var(--mesh-soft); }
-.mesh-button svg { width:16px; height:16px; }
+.mesh-button svg { flex-shrink:0; width:16px; height:16px; }
 /* A node's short name, as a chip. */
 .node-short { display:inline-block; padding:2px 7px; border-radius:6px; background:var(--mesh-soft); color:var(--mesh-primary); font-size:12px; font-weight:600; white-space:nowrap; }
 /* Chart tooltips: their card is set in theme.js; inside, meshTip's pieces. */
@@ -627,6 +627,8 @@ hr { margin:1rem 0; border:0; border-top:1px solid var(--mesh-border); }
 .mesh-about-version { margin-bottom:16px !important; color:var(--mesh-muted); font-size:13px; }
 .mesh-about-links { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin:0 0 18px; }
 .mesh-about-links a { justify-content:center; }
+/* Three links: the website alone on the first line, the other two under it. */
+.mesh-about-links.is-three a:first-child { grid-column:1 / -1; }
 .mesh-about-links svg { color:var(--mesh-primary); }
 .mesh-about-small { margin-bottom:6px !important; color:var(--mesh-muted); font-size:12.5px; text-wrap:balance; }
 .mesh-about-small a { color:var(--mesh-muted); }
