@@ -135,6 +135,25 @@ impl Notice {
         }
     }
 
+    /// A test notice, to check the channels. Its words say it is one; for a
+    /// program reading the webhook, it carries every field a real notice
+    /// does, about an example instance (on a domain and from an address kept
+    /// for examples), so that one can be built against it.
+    pub fn test(at: i64) -> Self {
+        Self {
+            version: Some("1.0.0".to_string()),
+            node_count: Some(0),
+            from_ip: Some(IpAddr::from([192, 0, 2, 1])),
+            ..Self::new(
+                Event::Test,
+                "https://meshview.example.org",
+                "ES",
+                Some("ES-GA"),
+                at,
+            )
+        }
+    }
+
     fn area(&self, language: Language) -> String {
         Areas::get().label(&self.country, self.region.as_deref(), language)
     }
@@ -148,10 +167,12 @@ impl Notice {
             Event::InstanceOffline => format!("Instance offline: {area}"),
             Event::InstanceOnline => format!("Instance back online: {area}"),
             Event::InstanceDeleted => format!("Instance deleted: {area}"),
+            Event::Test => "Test notice from Meshview Rust Planet".to_string(),
         }
     }
 
-    /// The details, starting with the instance's address.
+    /// The details, starting with the instance's address but for a test,
+    /// whose instance is only an example.
     pub fn message(&self) -> String {
         let days = self.days.unwrap_or_default();
         let nodes = self.node_count.unwrap_or_default();
@@ -178,7 +199,11 @@ impl Notice {
             Event::InstanceDeleted => {
                 format!("Offline for {days} days: deleted, with its history.{reason}")
             }
+            Event::Test => "If you read this, notices reach this channel.".to_string(),
         };
+        if self.event == Event::Test {
+            return detail;
+        }
         format!("{}\n{detail}", self.url)
     }
 
@@ -212,6 +237,7 @@ impl Notice {
             Event::InstanceOffline => &["warning"],
             Event::InstanceOnline => &["white_check_mark"],
             Event::InstanceDeleted => &["wastebasket"],
+            Event::Test => &["test_tube"],
         }
     }
 }
@@ -257,7 +283,21 @@ pub struct Notifier {
 }
 
 impl Notifier {
+    /// The channels configured, if any event is asked for.
     pub fn new(config: &Notifications) -> Result<Self> {
+        if config.events.is_empty() {
+            return Ok(Self::default());
+        }
+        Self::build(config)
+    }
+
+    /// The channels configured, whatever the events: for a test notice,
+    /// which is worth sending before any event is asked for.
+    pub fn testing(config: &Notifications) -> Result<Self> {
+        Self::build(config)
+    }
+
+    fn build(config: &Notifications) -> Result<Self> {
         let set = |value: &str| !value.trim().is_empty();
         let mut channels = Vec::new();
         if set(&config.webhook_url) {
@@ -278,7 +318,7 @@ impl Notifier {
         if set(&config.telegram_token) {
             channels.push(Channel::Telegram);
         }
-        if channels.is_empty() || config.events.is_empty() {
+        if channels.is_empty() {
             return Ok(Self::default());
         }
         let http = reqwest::Client::builder()
@@ -400,13 +440,16 @@ impl Notifier {
         url.path_segments_mut()
             .map_err(|_| anyhow::anyhow!("ntfy_url is not a server's URL"))?
             .pop();
-        let body = json!({
+        let mut body = json!({
             "topic": topic,
             "title": notice.title(),
             "message": notice.message(),
             "tags": notice.ntfy_tags(),
-            "click": notice.url,
         });
+        // A click opens the instance; a test's is only an example.
+        if notice.event != Event::Test {
+            body["click"] = json!(notice.url);
+        }
         self.post(inner, url.as_str(), &body, &inner.config.ntfy_token)
             .await
     }
@@ -552,5 +595,47 @@ mod tests {
     fn nothing_configured_is_nothing_to_do() {
         let notifier = Notifier::new(&Notifications::default()).unwrap();
         assert!(notifier.channels().is_empty());
+        assert!(
+            Notifier::testing(&Notifications::default())
+                .unwrap()
+                .channels()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_test_reaches_the_channels_with_no_event_asked_for() {
+        let config = Notifications {
+            events: Vec::new(),
+            ntfy_url: "https://ntfy.example.org/planet".into(),
+            ..Notifications::default()
+        };
+        assert!(Notifier::new(&config).unwrap().channels().is_empty());
+        assert_eq!(
+            Notifier::testing(&config).unwrap().channels(),
+            [Channel::Ntfy]
+        );
+    }
+
+    #[test]
+    fn a_test_notice_carries_what_a_real_one_does() {
+        let notice = Notice::test(1_794_571_200);
+        assert_eq!(notice.title(), "Test notice from Meshview Rust Planet");
+        assert!(!notice.message().contains("http"));
+        // The webhook gets every key a real notice has, with its type.
+        let test = notice.json();
+        let real = added().json();
+        let keys = |value: &Value| {
+            let mut keys: Vec<String> = value.as_object().unwrap().keys().cloned().collect();
+            keys.sort();
+            keys
+        };
+        assert_eq!(keys(&test), keys(&real));
+        assert_eq!(keys(&test["instance"]), keys(&real["instance"]));
+        assert_eq!(test["event"], "test");
+        assert_eq!(test["instance"]["area"]["en"], "Galicia, Spain");
+        assert_eq!(test["from_ip"], "192.0.2.1");
+        // Nobody can ask for it in the configuration.
+        assert!(crate::config::Config::parse("[notifications]\nevents = [\"test\"]").is_err());
     }
 }

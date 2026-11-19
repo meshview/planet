@@ -5,11 +5,11 @@
 
 use crate::collector::{Collector, unix_now};
 use crate::config::Config;
-use crate::notify::Notifier;
+use crate::notify::{Notice, Notifier};
 use crate::term::Style;
 use crate::web::{self, AppState};
 use crate::{admin, db, import};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::signal::unix::{SignalKind, signal};
@@ -82,6 +82,36 @@ fn notifier(config: &Config) -> Result<Notifier> {
         info!("notifying {} of {}", channels.join(", "), events.join(", "));
     }
     Ok(notifier)
+}
+
+/// A test notice to every notification channel configured, saying how each
+/// went; an error if any did not take it, or none is configured.
+pub async fn notify(config: Config) -> Result<()> {
+    let notifier = Notifier::testing(&config.notifications)?;
+    if notifier.channels().is_empty() {
+        bail!("no notification channel is configured: set one in [notifications]");
+    }
+    let results = notifier.deliver(&Notice::test(unix_now())).await;
+    let mut failed = 0;
+    for (channel, result) in &results {
+        match result {
+            Ok(()) => println!("{}: sent", channel.name()),
+            Err(e) => {
+                failed += 1;
+                println!("{}: not sent: {e:#}", channel.name());
+            }
+        }
+    }
+    if config.notifications.events.is_empty() {
+        println!("no events are asked for in [notifications] events: nothing else is sent");
+    }
+    if failed > 0 {
+        bail!(
+            "{failed} of {} channels did not take the notice",
+            results.len()
+        );
+    }
+    Ok(())
 }
 
 /// One collection round, and exit, saying what it did.

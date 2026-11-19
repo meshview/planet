@@ -53,6 +53,9 @@ enum Command {
         /// A country's code (ES) or part of its English name (spain).
         country: Option<String>,
     },
+    /// Send a test notice to every notification channel configured, say how
+    /// each went, and exit: to check `[notifications]`.
+    Notify,
     /// List, add, remove, disable or enable instances, and exit. It can be
     /// done with the server running: the site follows by itself.
     Instance {
@@ -142,6 +145,7 @@ async fn main() -> Result<()> {
         Command::Collect => app::collect(config).await,
         Command::Import { source } => app::import(config, &source).await,
         Command::Migrate => app::migrate(config).await,
+        Command::Notify => app::notify(config).await,
         Command::Areas { country } => {
             print!("{}", admin::areas(country.as_deref(), Style::for_stdout())?);
             Ok(())

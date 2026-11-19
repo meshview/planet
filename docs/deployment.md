@@ -13,6 +13,7 @@ instances, writing one SQLite file. There is nothing else to run beside it.
 | `meshview-planet migrate` | Create the database or bring its schema up to date, and exit. `run` does this by itself. |
 | `meshview-planet areas [country]` | List the countries to choose from or, given one, its regions, and exit. |
 | `meshview-planet instance …` | List, add, remove, disable or enable instances, and exit; see [Managing instances](#managing-instances). |
+| `meshview-planet notify` | Send a test notice to every notification channel configured, say how each went, and exit; see [Notifications](#notifications). |
 
 There is no default command: `meshview-planet` alone only shows the help, so
 that nobody starts a server by accident. The container image runs `run`
@@ -189,6 +190,10 @@ with JSON, ntfy, Discord, Slack, a Matrix room or a Telegram chat, any number at
 [`[notifications]`](configuration.md#notifications). The log says at start
 which channels are on and for what. Notices still on their way when the
 process stops get a few seconds to go.
+
+To check the configuration, `meshview-planet notify` sends a test notice to
+every channel configured, even with no events asked for yet, and says for each
+whether it took it or what it answered; it exits with an error if any did not.
 
 ## Probes and stopping
 

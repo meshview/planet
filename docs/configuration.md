@@ -104,7 +104,9 @@ Telling the administrator what happens to the list. Each channel is on when
 its address is set, and any number of them can be on at once; all get the same
 events. Notices are sent in the background: a channel that is down never holds
 up a submission or a collection, and its error is only logged. Unlike the
-instances, the channels may be on a private network.
+instances, the channels may be on a private network. `meshview-planet notify`
+sends a test notice to each, to check them: the webhook gets it as the event
+`test`, with every field a real one has, about an example instance.
 
 | Key | Default | |
 |---|---|---|

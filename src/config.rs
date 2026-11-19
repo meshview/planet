@@ -255,6 +255,9 @@ pub enum Event {
     InstanceOnline,
     /// An instance was offline for long enough to be deleted.
     InstanceDeleted,
+    /// A test notice, from `meshview-planet notify`: not one to configure.
+    #[serde(skip)]
+    Test,
 }
 
 impl Event {
@@ -264,6 +267,7 @@ impl Event {
             Self::InstanceOffline => "instance_offline",
             Self::InstanceOnline => "instance_online",
             Self::InstanceDeleted => "instance_deleted",
+            Self::Test => "test",
         }
     }
 }
