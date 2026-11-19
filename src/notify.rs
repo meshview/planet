@@ -41,6 +41,8 @@ pub struct Notice {
     pub region: Option<String>,
     /// What it runs, when that is known.
     pub version: Option<String>,
+    /// Which Meshview, when it says: `rust` for Meshview Rust.
+    pub flavor: Option<String>,
     /// Its nodes, when it just answered.
     pub node_count: Option<usize>,
     /// Why it is not answering, for one going offline or deleted.
@@ -61,6 +63,7 @@ impl Notice {
             country: country.to_string(),
             region: region.map(str::to_string),
             version: None,
+            flavor: None,
             node_count: None,
             last_error: None,
             days: None,
@@ -135,6 +138,15 @@ impl Notice {
         }
     }
 
+    /// The same notice, saying which Meshview the instance runs, as its
+    /// /version does.
+    pub fn with_flavor(self, flavor: Option<&str>) -> Self {
+        Self {
+            flavor: flavor.map(str::to_string),
+            ..self
+        }
+    }
+
     /// A test notice, to check the channels. Its words say it is one; for a
     /// program reading the webhook, it carries every field a real notice
     /// does, about an example instance (on a domain and from an address kept
@@ -142,6 +154,7 @@ impl Notice {
     pub fn test(at: i64) -> Self {
         Self {
             version: Some("1.0.0".to_string()),
+            flavor: Some("rust".to_string()),
             node_count: Some(0),
             from_ip: Some(IpAddr::from([192, 0, 2, 1])),
             ..Self::new(
@@ -177,6 +190,10 @@ impl Notice {
         let days = self.days.unwrap_or_default();
         let nodes = self.node_count.unwrap_or_default();
         let version = self.version.as_deref().unwrap_or("unknown");
+        let meshview = match self.flavor.as_deref() {
+            Some("rust") => "Meshview Rust",
+            _ => "Meshview",
+        };
         let reason = self
             .last_error
             .as_deref()
@@ -188,13 +205,13 @@ impl Notice {
                     .from_ip
                     .map(|ip| format!(", from {ip}"))
                     .unwrap_or_default();
-                format!("Meshview {version}, {nodes} nodes. Added from the site{from}.")
+                format!("{meshview} {version}, {nodes} nodes. Added from the site{from}.")
             }
             Event::InstanceOffline => format!(
                 "No answer in {days} days: its nodes are off the map until it answers again.{reason}"
             ),
             Event::InstanceOnline => {
-                format!("Answering again: Meshview {version}, {nodes} nodes.")
+                format!("Answering again: {meshview} {version}, {nodes} nodes.")
             }
             Event::InstanceDeleted => {
                 format!("Offline for {days} days: deleted, with its history.{reason}")
@@ -223,6 +240,7 @@ impl Notice {
                     "es": self.area(Language::Spanish),
                 },
                 "version": self.version,
+                "flavor": self.flavor,
                 "node_count": self.node_count,
                 "last_error": self.last_error,
             },
@@ -588,6 +606,14 @@ mod tests {
         assert_eq!(json["instance"]["region"], "ES-GA");
         assert_eq!(json["instance"]["area"]["es"], "Galicia, España");
         assert_eq!(json["instance"]["node_count"], 812);
+        assert_eq!(json["instance"]["flavor"], Value::Null);
+        let rust = Notice::online("https://x.example.org", "ES", None, "1.0.0", 3, 0)
+            .with_flavor(Some("rust"));
+        assert_eq!(rust.json()["instance"]["flavor"], "rust");
+        assert!(
+            rust.message()
+                .ends_with("Answering again: Meshview Rust 1.0.0, 3 nodes.")
+        );
         assert_eq!(json["from_ip"], "203.0.113.7");
     }
 

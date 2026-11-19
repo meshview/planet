@@ -424,10 +424,8 @@ pub async fn add_instance(
         .ok_or_else(|| anyhow::anyhow!("{} vanished right after being added", accepted.url))?;
     state.cache.clear();
     tracing::info!("{} added from {ip}", accepted.url);
-    state
-        .collector
-        .notifier()
-        .send(crate::notify::Notice::added(
+    state.collector.notifier().send(
+        crate::notify::Notice::added(
             &accepted.url,
             &instance.country,
             instance.region.as_deref(),
@@ -435,7 +433,9 @@ pub async fn add_instance(
             accepted.nodes,
             ip,
             unix_now(),
-        ));
+        )
+        .with_flavor(instance.flavor.as_deref()),
+    );
     Ok((
         StatusCode::CREATED,
         Json(Added {

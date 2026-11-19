@@ -108,14 +108,17 @@ impl Collector {
             Ok(snapshot) => {
                 if instance.offline_since.is_some() {
                     info!("{} answers again", instance.url);
-                    self.notifier.send(Notice::online(
-                        &instance.url,
-                        &instance.country,
-                        instance.region.as_deref(),
-                        &snapshot.version.version,
-                        snapshot.nodes.len(),
-                        now,
-                    ));
+                    self.notifier.send(
+                        Notice::online(
+                            &instance.url,
+                            &instance.country,
+                            instance.region.as_deref(),
+                            &snapshot.version.version,
+                            snapshot.nodes.len(),
+                            now,
+                        )
+                        .with_flavor(snapshot.version.flavor.as_deref()),
+                    );
                 }
                 db::record_success(
                     &self.pool,

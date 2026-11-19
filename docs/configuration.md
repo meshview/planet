@@ -111,7 +111,7 @@ sends a test notice to each, to check them: the webhook gets it as the event
 | Key | Default | |
 |---|---|---|
 | `events` | `["instance_added"]` | What to tell: any of `instance_added` (from the site, with the address it came from), `instance_offline`, `instance_online` (answering again after being offline) and `instance_deleted`. |
-| `webhook_url` | `""` | A URL to POST each event to, as JSON: `event`, `title`, `message`, `at`, `days`, `from_ip`, and `instance` with its `url`, `country`, `region`, `area` (`en`, `es`), `version`, `node_count` and `last_error`. |
+| `webhook_url` | `""` | A URL to POST each event to, as JSON: `event`, `title`, `message`, `at`, `days`, `from_ip`, and `instance` with its `url`, `country`, `region`, `area` (`en`, `es`), `version`, `flavor` (`rust` for Meshview Rust, else `null`), `node_count` and `last_error`. |
 | `ntfy_url` | `""` | An [ntfy](https://ntfy.sh) topic, as `https://ntfy.sh/my-topic` or on a server of your own. The notice opens the instance when tapped. |
 | `ntfy_token` | `""` | An ntfy access token, for a server or topic that asks for one. |
 | `discord_url` | `""` | A Discord channel's webhook URL. |
