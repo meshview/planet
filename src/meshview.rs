@@ -173,11 +173,13 @@ fn parse_node(value: &Value) -> Option<Node> {
     })
 }
 
-/// A position from Meshview's integers, degrees times ten million. 0 is what
-/// Meshtastic sends for no position, and out of range is not one either.
+/// A position from Meshview's integers, degrees times ten million. 0,0 is what
+/// Meshtastic sends for no position, and with the precision reduced it comes
+/// as the middle of a square near it: within a degree of 0,0 is left out, as
+/// Meshview's ingester does. Out of range is not a position either.
 fn position(lat: Option<i64>, lon: Option<i64>) -> Option<(f64, f64)> {
     let (lat, lon) = (lat?, lon?);
-    if lat == 0 && lon == 0 {
+    if lat.abs() <= 10_000_000 && lon.abs() <= 10_000_000 {
         return None;
     }
     let (lat, lon) = (lat as f64 / 1e7, lon as f64 / 1e7);
@@ -233,13 +235,15 @@ mod tests {
              "last_long": null, "is_mqtt_gateway": true},
             {"node_id": 1, "last_lat": 0, "last_long": 0},
             {"node_id": 2, "last_lat": 2000000000, "last_long": 0},
+            {"node_id": 3, "last_lat": 262144, "last_long": 262144},
+            {"node_id": 4, "last_lat": 10000001, "last_long": 0},
             {"node_id": 48915332, "long_name": "A repeat"},
             {"id": "!no-number"},
             {"node_id": -5},
             "junk"
         ]}"#;
         let nodes = parse_nodes(body).unwrap();
-        assert_eq!(nodes.len(), 4);
+        assert_eq!(nodes.len(), 6);
         assert_eq!(nodes[0].node_id, 48915332);
         assert_eq!(nodes[0].long_name.as_deref(), Some("%Modulo Industries"));
         assert_eq!(nodes[0].firmware, None);
@@ -249,6 +253,8 @@ mod tests {
         assert_eq!(nodes[1].is_mqtt_gateway, Some(true));
         assert_eq!(nodes[2].position, None);
         assert_eq!(nodes[3].position, None);
+        assert_eq!(nodes[4].position, None);
+        assert_eq!(nodes[5].position, Some((1.0000001, 0.0)));
     }
 
     #[test]
